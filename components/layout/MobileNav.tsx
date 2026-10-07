@@ -15,9 +15,9 @@ export default function MobileNav() {
         <ul className="flex gap-5 whitespace-nowrap px-6 pb-3 text-sm">
           {navItems.map((item) => (
             <li key={item.id}>
-              <a href={`#${item.id}`} className="text-muted transition-colors hover:text-fg">
+              <Link href={`/#${item.id}`} className="text-muted transition-colors hover:text-fg">
                 {item.label}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>

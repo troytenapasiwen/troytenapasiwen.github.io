@@ -23,15 +23,15 @@ export default function Sidebar() {
           <ul>
             {navItems.map((item, i) => (
               <li key={item.id}>
-                <a
-                  href={`#${item.id}`}
+                <Link
+                  href={`/#${item.id}`}
                   className="flex items-baseline gap-3 py-1.5 text-sm text-muted transition-colors hover:text-fg"
                 >
                   <span className="font-mono text-xs text-accent">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   {item.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>

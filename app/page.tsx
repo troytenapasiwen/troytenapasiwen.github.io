@@ -1,17 +1,10 @@
 import Hero from "@/components/sections/Hero";
 import About from "@/components/sections/About";
 import Experience from "@/components/sections/Experience";
+import Projects from "@/components/sections/Projects";
+import Skills from "@/components/sections/Skills";
 import Education from "@/components/sections/Education";
-import Section from "@/components/ui/Section";
-
-function Placeholder({ id }: { id: string }) {
-  return (
-    <Section id={id}>
-      <p className="text-muted">Coming in a later stage.</p>
-      <div className="h-40" />
-    </Section>
-  );
-}
+import Contact from "@/components/sections/Contact";
 
 export default function Home() {
   return (
@@ -19,10 +12,10 @@ export default function Home() {
       <Hero />
       <About />
       <Experience />
-      <Placeholder id="projects" />
-      <Placeholder id="skills" />
+      <Projects />
+      <Skills />
       <Education />
-      <Placeholder id="contact" />
+      <Contact />
     </>
   );
 }

@@ -68,6 +68,9 @@ export default function RootLayout({
           >
             {children}
           </main>
+          <footer className="mx-auto max-w-2xl border-t border-line px-6 py-8 text-xs text-muted lg:px-12">
+            © {new Date().getFullYear()} {site.name}
+          </footer>
         </div>
       </body>
     </html>
