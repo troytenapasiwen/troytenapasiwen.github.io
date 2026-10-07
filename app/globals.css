@@ -1,26 +1,64 @@
 @import "tailwindcss";
 
+/* Dark mode is controlled by a "dark" class on <html>, not the OS setting alone */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Color tokens. Change these values and the whole site updates. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #faf8f4;     /* warm off-white paper */
+  --fg: #1f1d1a;     /* ink */
+  --muted: #625d55;  /* secondary text */
+  --line: #e3ddd1;   /* thin divider lines */
+  --accent: #0f766e; /* the single accent color (deep teal) */
 }
 
+.dark {
+  --bg: #171614;
+  --fg: #ece8e1;
+  --muted: #a09a90;
+  --line: #35322d;
+  --accent: #5fcfc2;
+}
+
+/* Expose the tokens to Tailwind: bg-bg, text-fg, text-muted, border-line, text-accent */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+
   --font-sans: var(--font-geist-sans);
+  --font-serif: var(--font-newsreader);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+html {
+  scroll-padding-top: 6rem; /* keeps headings clear of the mobile top bar */
+}
+
+@media (min-width: 1024px) {
+  html {
+    scroll-padding-top: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Visible keyboard focus everywhere */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
 }
