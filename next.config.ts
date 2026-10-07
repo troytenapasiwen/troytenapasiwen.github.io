@@ -1,20 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  experimental: {
-    agentFeedback: true,
-  },
-  cacheComponents: true,
-  partialPrefetching: true,
-  turbopack: {
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
-  },
+  output: "export",          // generate static HTML into /out
+  images: { unoptimized: true }, // Pages has no image-optimization server
+  trailingSlash: true,       // /projects/x/ works reliably on GitHub Pages
 };
 
 export default nextConfig;
