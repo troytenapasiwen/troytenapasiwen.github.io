@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { navItems, site } from "@/data/site";
+import { site } from "@/data/site";
 import ThemeToggle from "./ThemeToggle";
+import NavLinks from "./NavLinks";
 
 export default function MobileNav() {
   return (
@@ -11,17 +12,7 @@ export default function MobileNav() {
         </Link>
         <ThemeToggle />
       </div>
-      <nav aria-label="Sections" className="overflow-x-auto">
-        <ul className="flex gap-5 whitespace-nowrap px-6 pb-3 text-sm">
-          {navItems.map((item) => (
-            <li key={item.id}>
-              <Link href={`/#${item.id}`} className="text-muted transition-colors hover:text-fg">
-                {item.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <NavLinks variant="mobile" />
     </header>
   );
 }

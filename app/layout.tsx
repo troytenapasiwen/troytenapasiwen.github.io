@@ -9,6 +9,8 @@ const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 const serif = Newsreader({ variable: "--font-newsreader", subsets: ["latin"] });
 
+const ogAlt = `${site.name} | ${site.headline}`;
+
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
@@ -22,6 +24,13 @@ export const metadata: Metadata = {
     url: site.url,
     siteName: site.name,
     type: "website",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: ogAlt }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${site.name} | ${site.role}`,
+    description: site.description,
+    images: ["/og.png"],
   },
 };
 
@@ -68,8 +77,10 @@ export default function RootLayout({
           >
             {children}
           </main>
-          <footer className="mx-auto max-w-2xl border-t border-line px-6 py-8 text-xs text-muted lg:px-12">
-            © {new Date().getFullYear()} {site.name}
+          <footer className="mx-auto max-w-2xl px-6 pb-8 lg:px-12">
+            <div className="border-t border-line pt-8 text-xs text-muted">
+              © {new Date().getFullYear()} {site.name}
+            </div>
           </footer>
         </div>
       </body>

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Mail } from "lucide-react";
-import { site, navItems } from "@/data/site";
+import { site } from "@/data/site";
 import { GitHubIcon, LinkedInIcon } from "@/components/ui/BrandIcons";
 import ThemeToggle from "./ThemeToggle";
+import NavLinks from "./NavLinks";
 
 const iconLink = "rounded p-2 text-muted transition-colors hover:text-fg";
 
@@ -19,23 +20,7 @@ export default function Sidebar() {
           {site.subtitle}
         </p>
 
-        <nav aria-label="Sections" className="mt-10">
-          <ul>
-            {navItems.map((item, i) => (
-              <li key={item.id}>
-                <Link
-                  href={`/#${item.id}`}
-                  className="flex items-baseline gap-3 py-1.5 text-sm text-muted transition-colors hover:text-fg"
-                >
-                  <span className="font-mono text-xs text-accent">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <NavLinks variant="sidebar" />
       </div>
 
       <div className="-ml-2 flex items-center gap-1">
