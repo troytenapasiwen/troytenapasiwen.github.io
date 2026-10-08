@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ------------------------------------------------------------------------------------------
-   Colour tokens. Change these values and the whole site updates.
+   Colour tokens. Change these values and the whole site updates. (Light appearance only.)
    --desk   the surface the dossier sits on
    --folder the folder itself (cover, back panel)
    --paper  the sheets written inside the folder
@@ -20,7 +20,7 @@
   --folder-2: #2a2b30;
   --folder-ink: #efe9dc;
   --folder-mute: #a9a498;
-  --accent-dk: #5fcfc2; /* accent on the dossier folder */
+  --accent-dk: #5fcfc2; /* accent on the dark folder */
 }
 
 /* Expose the tokens to Tailwind: bg-paper, border-rule, text-muted, text-accent ... */
@@ -62,90 +62,161 @@ body {
 }
 
 /* ==========================================================================================
+   PHYSICAL STATE
+   Dossier.tsx writes three numbers (0 → 1) onto the elements marked [data-drive]:
+     --ra  rotation   0 = landscape      1 = portrait
+     --sb  sidebar    0 = hidden         1 = in place
+     --op  opening    0 = closed         1 = open (right cover swung to the left)
+   They are derived from the scroll position and from nothing else, which is why everything
+   reverses on its own when you scroll up. They are registered with inherits:false so changing
+   them restyles only the few driven elements, never the page text below them.
+   ========================================================================================== */
+@property --ra { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --sb { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --op { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --a { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --e { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --sbe { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --arc { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --scale { syntax: "<number>"; inherits: false; initial-value: 1; }
+@property --turn { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@property --tx { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --ty { syntax: "<number>"; inherits: false; initial-value: 0; }
+
+[data-drive] {
+  --a: calc(var(--ra) * var(--ra) * (3 - 2 * var(--ra)));      /* eased rotation */
+  --e: calc(var(--op) * var(--op) * (3 - 2 * var(--op)));      /* eased opening */
+  --sbe: calc(var(--sb) * var(--sb) * (3 - 2 * var(--sb)));    /* eased sidebar */
+  --arc: calc(4 * var(--a) * (1 - var(--a)));                  /* 0 → 1 → 0 while turning: the lift */
+  --turn: calc((1 - var(--a)) * 90deg);                        /* quarter turn left to make */
+  --scale: calc(var(--ls, 1) + (1 - var(--ls, 1)) * var(--a) - var(--arc) * var(--dip, 0)); /* landscape is larger; pulled back mid-turn so it fits */
+}
+
+/* No script, or the plain document: show the finished state, nothing staged. */
+html:not(.js) [data-drive],
+[data-dm="static"] [data-drive] { --ra: 1; --sb: 1; --op: 1; }
+
+/* ==========================================================================================
    THE DOSSIER
    <html data-dm="cinematic | flow | static"> picks the presentation (see layout.tsx / Dossier.tsx).
    Rules without a data-dm prefix describe "flow", which is also what you get without JavaScript.
    ========================================================================================== */
 
-:root { --topbar: 5.4rem; }
-@media (min-width: 1024px) { :root { --topbar: 3.5rem; } }
+/* Folder geometry is written by Dossier.tsx (--pw, --ph, --side, --ls); these are the fallbacks. */
+.d-root {
+  position: relative; overflow-x: clip;
+  --pw: min(calc(100vw - 92px), 420px);
+  --ph: calc(var(--pw) / 0.72);
+  --side: 44px;
+  --ls: 1;
+}
+@media (min-width: 1024px) { .d-root { --side: 216px; } }
 
-.d-root { position: relative; overflow-x: clip; }
+/* ---------------------------------------------------------------- sidebar ---------------- */
+.d-sidebar {
+  position: fixed; inset: 0 auto 0 0; z-index: 60; width: var(--side);
+  container: side / inline-size;
+  display: flex; flex-direction: column;
+  background: var(--desk); border-right: 1px solid var(--rule);
+  opacity: var(--sbe);
+  transform: translate3d(calc((1 - var(--sbe)) * -100%), 0, 0);
+}
+.d-sidebar[data-on="0"] { visibility: hidden; pointer-events: none; }
 
-/* ---------------------------------------------------------------- top bar ---------------- */
-.d-topbar {
-  position: fixed; inset: 0 0 auto 0; z-index: 60;
-  background: var(--desk);
-  border-bottom: 1px solid var(--rule);
-}
-.d-topbar-inner {
-  display: grid; grid-template-columns: 1fr auto; align-items: center;
-  gap: 0 1rem; padding: 0.55rem 1rem 0; max-width: 1480px; margin: 0 auto;
-}
-.d-brand { font-family: var(--font-serif), serif; font-size: 1.2rem; letter-spacing: -0.01em; }
-.d-nav {
-  grid-column: 1 / -1; grid-row: 2; overflow-x: auto; scrollbar-width: none;
-  margin: 0 -1rem; padding: 0 1rem;
-}
+/* slim rail (phones, tablets): section numbers only */
+.d-brand { display: none; }
+.d-nav { padding-top: 1rem; overflow-y: auto; scrollbar-width: none; flex: 1; min-height: 0; }
 .d-nav::-webkit-scrollbar { display: none; }
-.d-nav ul { display: flex; gap: 1.2rem; white-space: nowrap; list-style: none; margin: 0; padding: 0; }
+.d-nav ul { display: flex; flex-direction: column; list-style: none; margin: 0; padding: 0; gap: 0.2rem; }
 .d-nav a {
-  display: flex; align-items: baseline; gap: 0.45rem;
-  padding: 0.55rem 0 0.6rem; font-size: 0.84rem; color: var(--muted);
-  border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s;
+  display: flex; align-items: center; justify-content: center; height: 2.7rem;
+  color: var(--muted); border-left: 2px solid transparent; transition: color 0.2s, border-color 0.2s;
 }
 .d-nav a:hover { color: var(--fg); }
-.d-nav a[aria-current="location"] { color: var(--fg); border-bottom-color: var(--accent); }
-.d-nav-no { font-family: var(--font-geist-mono), monospace; font-size: 0.68rem; color: var(--accent); }
-.d-tools { display: flex; align-items: center; gap: 0.35rem; }
+.d-nav a[aria-current="location"] { color: var(--fg); border-left-color: var(--accent); background: rgba(0, 0, 0, 0.035); }
+.d-nav-no { font-family: var(--font-geist-mono), monospace; font-size: 0.7rem; color: var(--accent); }
+.d-nav-label {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.d-side-foot { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 0.8rem 0 0.9rem; }
+.d-folio { display: none; }
 .d-toggle {
-  font-family: var(--font-geist-mono), monospace; font-size: 0.66rem; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--muted); border: 1px solid var(--rule);
-  padding: 0.32rem 0.55rem; border-radius: 3px; transition: color 0.2s, border-color 0.2s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--muted);
+  border: 1px solid var(--rule); border-radius: 3px; width: 2rem; height: 2rem;
+  font-family: var(--font-geist-mono), monospace; font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase;
+  transition: color 0.2s, border-color 0.2s;
 }
 .d-toggle:hover { color: var(--fg); border-color: var(--muted); }
-.d-progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; }
+.d-toggle-text { display: none; }
+.d-progress { position: absolute; top: 0; bottom: 0; right: -1px; width: 2px; }
 .d-progress span {
-  display: block; height: 100%; background: var(--accent);
-  transform-origin: left; transform: scaleX(var(--gp, 0));
+  display: block; width: 100%; height: 100%; background: var(--accent);
+  transform-origin: top; transform: scaleY(var(--gp, 0));
 }
-@media (min-width: 1024px) {
-  .d-topbar-inner { grid-template-columns: auto 1fr auto; padding: 0 1.5rem; height: var(--topbar); }
-  .d-nav { grid-column: 2; grid-row: 1; margin: 0; padding: 0; overflow: visible; }
-  .d-nav ul { justify-content: center; gap: 1.7rem; }
-  .d-nav a { padding: 1.1rem 0 1rem; }
+
+/* full sidebar (wide screens) */
+@container side (min-width: 150px) {
+  .d-brand { display: flex; flex-direction: column; gap: 0.2rem; padding: 1.7rem 1.4rem 0; }
+  .d-brand-name { font-family: var(--font-serif), serif; font-size: 1.3rem; letter-spacing: -0.01em; line-height: 1.1; }
+  .d-brand-sub {
+    font-family: var(--font-geist-mono), monospace; font-size: 0.6rem; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .d-nav { padding: 2.2rem 0 0; }
+  .d-nav ul { gap: 0; }
+  .d-nav a {
+    justify-content: flex-start; align-items: baseline; gap: 0.8rem; height: auto;
+    padding: 0.68rem 1.4rem 0.68rem 1.2rem; font-size: 0.92rem;
+  }
+  .d-nav-label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; }
+  .d-side-foot { align-items: stretch; padding: 0.9rem 1.4rem 1.3rem; border-top: 1px solid var(--rule); margin: 0 0 0; }
+  .d-folio { display: block; font-family: var(--font-geist-mono), monospace; font-size: 0.7rem; letter-spacing: 0.14em; color: var(--muted); }
+  .d-toggle { width: auto; height: auto; padding: 0.42rem 0.65rem; justify-content: flex-start; }
+  .d-toggle-text { display: inline; }
 }
 
 /* ---------------------------------------------------------------- structure (flow) ------- */
 .d-track { position: relative; }
 .d-stage, .d-object { display: contents; }
+.d-shadow { display: none; }
 
-/* The cover sticks to the top while the pages slide up over it. */
+/* The cover sticks to the top while the folder turns and opens, then the pages slide up over it. */
 .d-cover-wrap {
-  position: sticky; top: 0; z-index: 1; height: 100svh;
+  position: sticky; top: 0; z-index: 1; height: 100svh; overflow: clip;
   display: grid; place-items: center;
-  padding: calc(var(--topbar) + 0.75rem) 1rem 1.5rem;
 }
+/* Scroll distance during which the cover is pinned and plays its sequence. */
+.d-spacer { height: calc((var(--intro, 2.1) - 0.15) * 100svh); }
 .d-frame {
-  position: relative; z-index: 2;
+  position: relative; z-index: 2; margin-left: var(--side);
   background: var(--folder); padding: 0.75rem;
-  border-radius: 14px 14px 0 0; box-shadow: 0 -24px 48px -24px rgba(0, 0, 0, 0.5);
+  border-radius: 6px 6px 0 0; box-shadow: 0 -24px 48px -24px rgba(0, 0, 0, 0.5);
 }
 .d-frame-tab { display: none; }
 .d-pages { display: grid; gap: 0.75rem; }
-.d-page { scroll-margin-top: calc(var(--topbar) + 0.5rem); }
+.d-page { container: page / inline-size; scroll-margin-top: 0.75rem; }
 
 /* ---------------------------------------------------------------- the folder ------------- */
+/* The folder shell is always built portrait; landscape is the same shell turned a quarter turn. */
 .d-lid-holder {
-  position: relative; width: min(92vw, 540px); height: min(68svh, 640px);
-  perspective: 2200px; perspective-origin: 20% 50%;
+  position: relative; width: var(--pw); height: var(--ph); transform-style: preserve-3d;
+  transform:
+    perspective(5200px)
+    translate3d(calc(var(--side) * 0.5 * var(--sbe)), calc(var(--arc) * -12px), 0)
+    rotateX(calc(var(--arc) * 8deg))
+    rotateY(calc(var(--arc) * -6deg))
+    scale(var(--scale))
+    rotateZ(var(--turn));
+  will-change: transform;
 }
+
+/* the board the lid opens over (phones / tablets) */
 .d-folder-base {
-  position: absolute; inset: 0; background: var(--folder); border-radius: 6px; padding: 12px;
-  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.6);
+  position: absolute; inset: 0; background: var(--folder); border-radius: 4px; padding: 12px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 24px 50px -24px rgba(0, 0, 0, 0.6), 0 0 36px rgba(40, 28, 10, 0.18);
 }
 .d-folder-inner {
-  height: 100%; background: var(--paper); border-radius: 3px; padding: 1.4rem;
+  height: 100%; background: var(--paper); border-radius: 2px; padding: 1.4rem;
   display: flex; flex-direction: column; gap: 0.9rem;
 }
 .d-folder-inner span {
@@ -157,112 +228,159 @@ body {
 .d-folder-inner i:nth-of-type(3) { width: 91%; }
 .d-folder-inner i:nth-of-type(4) { width: 64%; }
 
+/* the spine: the thickness of the fold the lid hinges on */
+.d-spine {
+  position: absolute; left: -5px; top: 0; bottom: 0; width: 10px; border-radius: 3px;
+  background: linear-gradient(90deg, #0a0a0b, #2a2b30 40%, #15161a 62%, #0a0a0b);
+  transform: translateZ(1px);
+}
+
+/* the lid: hinged on its left edge, opens right → left, comes to rest flat on the left */
 .d-lid {
-  --lf: clamp(0, calc((var(--f, 0) - 0.04) / 0.78), 1);
-  --e: calc(var(--lf) * var(--lf) * (3 - 2 * var(--lf)));
   position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 0 50%;
-  transform: translate3d(calc(var(--e) * -3vw), 0, 0) rotateY(calc(var(--e) * -156deg));
+  transform: translate3d(0, 0, 3px) rotateY(calc(var(--e) * -180deg));
   will-change: transform;
 }
 .d-lid-face {
-  position: absolute; inset: 0; border-radius: 6px;
+  position: absolute; inset: 0; border-radius: 4px;
   -webkit-backface-visibility: hidden; backface-visibility: hidden;
-  opacity: clamp(0, calc((1 - var(--lf)) * 3.2), 1);
 }
 .d-lid-front {
   color: var(--folder-ink);
   background:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.55'/></svg>") ,
-    radial-gradient(120% 90% at 18% 0%, rgba(255, 255, 255, 0.08), transparent 58%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.025), rgba(0, 0, 0, 0.18)),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.55'/></svg>"),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 38%, rgba(0, 0, 0, 0.2)),
     var(--folder);
-  background-blend-mode: soft-light, normal, normal, normal;
-  box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  background-blend-mode: soft-light, normal, normal;
+  /* a hairline lighter edge on the top-left, darker on the bottom-right: board thickness */
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.1), inset -1px -1px 0 rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 14px 30px -14px rgba(0, 0, 0, 0.55);
 }
-/* hairline frame inside the cover */
+/* hairline frame blind-stamped into the cover */
 .d-lid-front::before {
-  content: ""; position: absolute; inset: 14px; border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 3px; pointer-events: none;
+  content: ""; position: absolute; inset: 14px; border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 2px; pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
-/* the cover darkens as it turns away from the light */
+/* the cover darkens as it turns away from the light while it swings */
 .d-lid-front::after {
-  content: ""; position: absolute; inset: 0; border-radius: 6px; pointer-events: none;
+  content: ""; position: absolute; inset: 0; border-radius: 4px; pointer-events: none;
   background: linear-gradient(100deg, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.55));
   opacity: var(--e);
 }
 .d-lid-back {
   transform: rotateY(180deg);
-  background: linear-gradient(200deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.2)), var(--folder-2);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0) 9%),
+    linear-gradient(200deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.18)),
+    var(--folder-2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 16px 34px -16px rgba(0, 0, 0, 0.6);
   color: var(--folder-ink);
 }
 .d-lid-back-inner { position: absolute; inset: 0; padding: 12% 11%; display: flex; flex-direction: column; gap: 1.4rem; }
 .d-lid-back-inner ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.2rem; }
 .d-lid-back-inner li {
-  font-family: var(--font-serif), serif; font-size: clamp(1.1rem, 2.2vw, 1.7rem);
+  font-family: var(--font-serif), serif; font-size: clamp(1rem, calc(var(--pw) * 0.045), 1.7rem);
   display: flex; gap: 1rem; align-items: baseline; padding: 0.35rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 .d-lid-back-inner li span {
   font-family: var(--font-geist-mono), monospace; font-size: 0.65rem; color: var(--accent-dk);
 }
+.d-lid-back-foot {
+  margin-top: auto; font-family: var(--font-geist-mono), monospace; font-size: 0.62rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--folder-mute);
+}
 
-/* tab, crop marks, sheen */
+/* tab and crop marks */
 .d-lid-tab {
-  position: absolute; left: clamp(1.4rem, 4vw, 3.4rem); top: -1.7rem; height: 1.7rem; padding: 0 1.6rem;
+  position: absolute; left: clamp(1.4rem, 7%, 3.4rem); top: -1.7rem; height: 1.7rem; padding: 0 1.6rem;
   display: flex; align-items: center;
   font-family: var(--font-geist-mono), monospace; font-size: 0.64rem; letter-spacing: 0.22em; text-transform: uppercase;
   color: var(--folder-mute); background: var(--folder);
   clip-path: polygon(0 100%, 7% 0, 93% 0, 100% 100%);
 }
-.d-crop { position: absolute; width: 14px; height: 14px; border: 0 solid rgba(255, 255, 255, 0.32); }
+/* the score line where the cover folds at the spine */
+.d-crease {
+  position: absolute; top: 0; bottom: 0; left: 3.4%; width: 10px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.4) 45%, rgba(255, 255, 255, 0.07) 58%, transparent);
+}
+.d-crop { position: absolute; width: 14px; height: 14px; border: 0 solid rgba(255, 255, 255, 0.28); }
 .d-crop-tl { top: 6px; left: 6px; border-top-width: 1px; border-left-width: 1px; }
 .d-crop-tr { top: 6px; right: 6px; border-top-width: 1px; border-right-width: 1px; }
 .d-crop-bl { bottom: 6px; left: 6px; border-bottom-width: 1px; border-left-width: 1px; }
 .d-crop-br { bottom: 6px; right: 6px; border-bottom-width: 1px; border-right-width: 1px; }
-.d-sheen { position: absolute; inset: 0; overflow: hidden; border-radius: 6px; pointer-events: none; }
-.d-sheen::before {
-  content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 38%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.07), transparent);
-  animation: d-sheen 10s ease-in-out 1.2s infinite;
-}
-@keyframes d-sheen { 0% { transform: translateX(-130%); } 55%, 100% { transform: translateX(300%); } }
 
-/* cover typography */
+/* ---- the lettering printed on the cover -------------------------------------------------
+   Sized to the folder's visual box (landscape → portrait) and counter-rotated, so the type is
+   always upright. While the shell turns beneath it the print is eased smaller and lighter so it
+   always sits inside the folder's edges. */
 .d-cover {
-  position: absolute; inset: 0; padding: clamp(1.7rem, 3.6vw, 3.2rem);
+  --af: var(--a);
+  position: absolute; left: 50%; top: 50%;
+  width: calc(var(--ph) * (1 - var(--a)) + var(--pw) * var(--a));
+  height: calc(var(--pw) * (1 - var(--a)) + var(--ph) * var(--a));
+  container-type: size;
+  transform: translate(-50%, -50%) rotate(calc(var(--turn) * -1)) scale(calc(1 - var(--arc) * 0.3));
+  opacity: calc(1 - var(--arc) * 0.35);
+}
+.d-print {
+  position: absolute; inset: 0; padding: clamp(1.1rem, 4.6cqw, 3.2rem);
   display: flex; flex-direction: column; justify-content: space-between; gap: 1rem;
 }
 .d-cover-top, .d-cover-bottom {
-  display: flex; justify-content: space-between; gap: 1rem;
+  display: flex; justify-content: space-between; gap: 1rem; min-width: 0;
   font-family: var(--font-geist-mono), monospace; font-size: 0.66rem; letter-spacing: 0.16em;
   text-transform: uppercase; color: var(--folder-mute);
 }
+.d-cover-top span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .d-cover-main { display: flex; flex-direction: column; gap: 1.1rem; }
 .d-cover-name {
   margin: 0; font-family: var(--font-serif), serif; font-weight: 400;
-  font-size: clamp(2.8rem, 14vw, 4.8rem); line-height: 0.94; letter-spacing: -0.025em;
+  font-size: calc(9.6cqw + 8.8cqw * var(--af)); line-height: 0.94; letter-spacing: -0.025em;
   color: var(--folder-ink);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.07), 0 -1px 0 rgba(0, 0, 0, 0.55);
 }
+.d-nw { display: block; }
 .d-cover-role {
-  margin: 0; font-family: var(--font-geist-mono), monospace; font-size: clamp(0.74rem, 2.9vw, 0.92rem);
+  margin: 0; font-family: var(--font-geist-mono), monospace;
+  font-size: max(0.72rem, calc(1.5cqw + 1.2cqw * var(--af)));
   letter-spacing: 0.05em; color: rgba(239, 233, 220, 0.82);
 }
 .d-cover-role::before {
   content: ""; display: block; width: 3.2rem; height: 2px; background: var(--accent-dk); margin-bottom: 1.1rem;
 }
 .d-cover-bottom { align-items: flex-end; text-transform: none; letter-spacing: 0.04em; font-size: 0.72rem; line-height: 1.5; }
-.d-cover-bottom > div { display: flex; flex-direction: column; gap: 0.3rem; max-width: 22rem; }
+.d-cover-bottom > div:first-child { display: flex; flex-direction: column; gap: 0.3rem; max-width: 62%; }
 .d-cover-label { text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.62rem; color: var(--accent-dk); }
-.d-cover-contents { display: none !important; }
-.d-cover-cue {
-  flex-direction: row !important; align-items: center; gap: 0.6rem !important;
-  text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.64rem;
-  opacity: clamp(0, calc(1 - var(--f, 0) * 8), 1);
+/* the contents line is printed on the landscape cover and fades as the folder turns */
+.d-cover-contents {
+  position: absolute; left: clamp(1.1rem, 4.6cqw, 3.2rem); right: clamp(1.1rem, 4.6cqw, 3.2rem);
+  bottom: calc(clamp(1.1rem, 4.6cqw, 3.2rem) + 3.6rem);
+  display: flex; flex-direction: column; gap: 0.3rem;
+  font-family: var(--font-geist-mono), monospace; font-size: 0.72rem; letter-spacing: 0.04em; line-height: 1.5;
+  color: var(--folder-mute);
+  opacity: clamp(0, calc(1 - var(--af) * 3), 1);
 }
+.d-cover-cue {
+  display: flex; flex-direction: row; align-items: center; gap: 0.6rem;
+  text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.64rem;
+  opacity: clamp(0, calc(1 - var(--af) * 3), 1);
+}
+/* small covers have no room for the printed contents line */
+@container (max-width: 640px) { .d-cover-contents { display: none; } }
 .d-cover-cue svg { animation: d-cue 2.2s ease-in-out infinite; color: var(--accent-dk); }
 @keyframes d-cue { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+
+/* ---------------------------------------------------------------- entrance --------------- */
+/* The page starts as background only. Dossier.tsx sets [data-in] after about a second and the
+   folder is presented: it settles up into place. (translate/opacity only: no layout, no repaint.) */
+.d-lid-holder, .d-object {
+  transition: opacity 0.9s ease, translate 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+html.js[data-dm="flow"] .d-root:not([data-in]) .d-lid-holder,
+html.js[data-dm="cinematic"] .d-root:not([data-in]) .d-object {
+  opacity: 0; translate: 0 38px;
+}
 
 /* ---------------------------------------------------------------- sheets (flow) ---------- */
 .d-sheet {
@@ -288,40 +406,14 @@ body {
 .d-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-top: 1.2rem; }
 
 .d-cols { display: grid; gap: 1.6rem; align-content: start; flex: 1; min-height: 0; }
-@media (min-width: 900px) {
+.d-cols-intro { align-content: center; }
+@container page (min-width: 900px) {
   .d-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(1.4rem, 3.4vw, 3.4rem); }
   .d-cols-intro { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-content: center; align-items: center; }
 }
 .d-col { display: flex; flex-direction: column; gap: 0.8em; min-width: 0; }
 .d-col-center { justify-content: center; }
 .d-col-about { gap: 0.9em; }
-.d-portrait {
-  width: min(100%, 430px);
-  margin: clamp(1rem, 4vh, 2.5rem) auto 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-}
-.d-portrait-image {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 0.82;
-  object-fit: cover;
-  object-position: center top;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  filter: saturate(0.84) contrast(1.02);
-  box-shadow: 0 24px 52px -32px rgba(0, 0, 0, 0.65);
-}
-.d-portrait-caption {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted);
-  text-align: right;
-}
 .d-stack { display: flex; flex-direction: column; gap: clamp(0.9rem, 2vh, 1.5rem); flex: 1; min-height: 0; }
 .d-head { display: flex; flex-direction: column; gap: 0.45em; }
 .d-center-block { margin-block: auto; display: flex; flex-direction: column; gap: 0.9em; max-width: 46em; }
@@ -401,7 +493,7 @@ body {
 .d-pipe-node + .d-pipe-node { border-top: 1px solid var(--rule); }
 .d-pipe-step { font-family: var(--font-geist-mono), monospace; font-size: 0.64em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
 .d-pipe-label { font-family: var(--font-serif), serif; font-size: 1.1em; line-height: 1.25; }
-@media (min-width: 760px) {
+@container page (min-width: 700px) {
   .d-pipe { grid-template-columns: repeat(4, 1fr); }
   .d-pipe-node + .d-pipe-node { border-top: 0; border-left: 1px solid var(--rule); }
   .d-pipe-node + .d-pipe-node::before {
@@ -429,8 +521,8 @@ body {
 
 /* skills: system inventory */
 .d-inventory { display: grid; gap: clamp(0.8rem, 2.2vh, 1.4rem) 2rem; grid-template-columns: 1fr; }
-@media (min-width: 640px) { .d-inventory { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (min-width: 1024px) { .d-inventory { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container page (min-width: 420px) { .d-inventory { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container page (min-width: 900px) { .d-inventory { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .d-inv-head {
   display: flex; align-items: baseline; gap: 0.7em; margin: 0 0 0.35em; padding-bottom: 0.4em;
   border-bottom: 1px solid var(--fg); font-family: var(--font-geist-mono), monospace; font-weight: 400;
@@ -495,89 +587,143 @@ body {
 }
 .write-rule { transform-origin: left; transform: scaleX(var(--r)); }
 
+
 /* ==========================================================================================
-   CINEMATIC (desktop): one pinned stage; folder opens, pages are written and turned
+   CINEMATIC (desktop): one pinned stage; the folder turns, the sidebar arrives, the folder opens,
+   then the pages are written and turned. Everything inside .d-object is ONE physical object.
    ========================================================================================== */
 [data-dm="cinematic"] .d-track { height: calc(var(--total) * 100vh); }
 [data-dm="cinematic"] .d-stage { display: block; position: sticky; top: 0; height: 100vh; overflow: hidden; }
 
+/* The object is the closed portrait folder, centred in the stage. Every state is a transform of it:
+     rotateZ   landscape → portrait (a rigid quarter turn of the whole object)
+     rotateX/Y a small lift-and-tilt while it turns, plus a gentle pointer tilt while it is closed
+     scale     landscape is shown larger, settling to 1
+     translate keeps the visible folder centred between the sidebar and the right edge;
+               it moves right by half a panel as the lid opens so the open spread stays centred */
 [data-dm="cinematic"] .d-object {
-  --fw: min(94vw, 1200px);
-  --fh: min(calc(100vh - var(--topbar) - 3.6rem), 820px);
-  --tiltk: clamp(0, calc(1 - var(--f, 0) * 6), 1);
-  display: block; position: absolute; left: 50%; top: calc(var(--topbar) + 2.4rem);
-  width: var(--fw); height: var(--fh); margin-left: calc(var(--fw) / -2);
-  transform: perspective(2200px)
-    rotateX(calc(var(--ty, 0) * var(--tiltk) * -1.1deg))
-    rotateY(calc(var(--tx, 0) * var(--tiltk) * 1.6deg));
-  transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  display: block; position: absolute; left: 50%; top: 50%;
+  width: var(--pw); height: var(--ph);
+  margin: calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2);
+  transform-style: preserve-3d;
+  transform:
+    perspective(5200px)
+    translate3d(calc(var(--side) * 0.5 * var(--sbe) + var(--pw) * 0.5 * var(--e)), calc(var(--arc) * -16px), 0)
+    rotateX(calc(var(--arc) * 9deg + var(--ty) * clamp(0, calc(1 - var(--op) * 6), 1) * -1.1deg))
+    rotateY(calc(var(--arc) * -7deg + var(--tx) * clamp(0, calc(1 - var(--op) * 6), 1) * 1.6deg))
+    scale(var(--scale))
+    rotateZ(var(--turn));
+  will-change: transform;
 }
-[data-dm="cinematic"] .d-root[data-opened] .d-object { transform: none; transition: none; }
+/* Fully open: a plain translation (crisp text, no 3D resampling). */
+[data-dm="cinematic"] .d-root[data-settled] .d-object {
+  transform: translate3d(calc(var(--side) * 0.5 + var(--pw) * 0.5), 0, 0);
+}
 
-/* sheets of paper peeking out behind the folder */
+/* sheets of paper standing in the folder, seen at its edge. Layered in depth, so they shift
+   against the cover as it tilts. */
 [data-dm="cinematic"] .d-object::before,
 [data-dm="cinematic"] .d-object::after {
-  content: ""; position: absolute; inset: 0; border-radius: 6px; border: 1px solid var(--rule);
+  content: ""; position: absolute; inset: 0; border-radius: 3px; border: 1px solid var(--rule); background: var(--paper);
 }
-[data-dm="cinematic"] .d-object::before { background: var(--paper); transform: translate(20px, -14px); opacity: 0.55; }
-[data-dm="cinematic"] .d-object::after { background: var(--paper); transform: translate(10px, -7px); opacity: 0.85; }
+[data-dm="cinematic"] .d-object::before { transform: translate3d(11px, -8px, -5px); opacity: 0.6; }
+[data-dm="cinematic"] .d-object::after { transform: translate3d(6px, -4px, -2px); opacity: 0.9; }
+
+/* the folder's shadow on the desk: a soft contact shadow always, and a wider, deeper one that
+   appears only while the folder is lifted and turning (opacity only, so it costs nothing) */
+[data-dm="cinematic"] .d-shadow {
+  display: block; position: absolute; inset: 0; border-radius: 4px; pointer-events: none;
+  transform: translate3d(0, 0, -12px);
+  box-shadow: 0 0 34px 2px rgba(40, 28, 10, 0.22), 0 6px 14px -4px rgba(40, 28, 10, 0.34);
+}
+[data-dm="cinematic"] .d-shadow::after {
+  content: ""; position: absolute; inset: 0; border-radius: 4px;
+  box-shadow: 0 34px 70px -6px rgba(40, 28, 10, 0.4);
+  opacity: var(--arc);
+}
 
 [data-dm="cinematic"] .d-cover-wrap {
-  position: absolute; inset: 0; z-index: 5; display: block; height: auto; padding: 0; pointer-events: none;
+  position: absolute; inset: 0; z-index: 5; display: block; height: auto; overflow: visible;
+  transform-style: preserve-3d; pointer-events: none;
 }
-[data-dm="cinematic"] .d-lid-holder { position: absolute; inset: 0; width: auto; height: auto; }
+[data-dm="cinematic"] .d-lid-holder {
+  position: absolute; inset: 0; width: auto; height: auto; transform: none; will-change: auto;
+  transition: none; opacity: 1; translate: none;
+}
 [data-dm="cinematic"] .d-folder-base { display: none; }
+[data-dm="cinematic"] .d-spacer { display: none; }
 
+/* the back board with the sheets in it: the right-hand panel once the folder is open */
 [data-dm="cinematic"] .d-frame {
-  position: absolute; inset: 0; z-index: 1; padding: 14px; border-radius: 6px;
-  box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  position: absolute; inset: 0; z-index: 1; margin: 0; padding: 14px; border-radius: 4px;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.08), inset -1px -1px 0 rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.55);
 }
 [data-dm="cinematic"] .d-frame-tab {
-  display: flex; align-items: center; position: absolute; right: clamp(1.4rem, 4vw, 3.4rem); top: -1.7rem;
+  display: flex; align-items: center; position: absolute; right: clamp(1.4rem, 7%, 3.4rem); top: -1.7rem;
   height: 1.7rem; padding: 0 1.6rem; background: var(--folder); color: var(--folder-mute);
   font-family: var(--font-geist-mono), monospace; font-size: 0.64rem; letter-spacing: 0.18em; text-transform: uppercase;
   clip-path: polygon(0 100%, 7% 0, 93% 0, 100% 100%); white-space: nowrap;
+  opacity: var(--e);
 }
-[data-dm="cinematic"] .d-pages { display: block; position: relative; width: 100%; height: 100%; }
+[data-dm="cinematic"] .d-pages {
+  display: block; position: relative; width: 100%; height: 100%;
+  perspective: 1800px; perspective-origin: 0 50%;
+}
+/* the top sheet of the stack: blank paper, there before anything is written on it */
+[data-dm="cinematic"] .d-pages::before {
+  content: ""; position: absolute; inset: 0; background: var(--paper); border: 1px solid var(--rule); border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
 
 [data-dm="cinematic"] .d-page {
+  container: page / size;
   --in: clamp(0, calc(var(--p, 0) / var(--ov, 0.2)), 1);
   --out: clamp(0, calc((var(--p, 0) - 1 + var(--ov, 0.2)) / var(--ov, 0.2)), 1);
-  position: absolute; inset: 0;
+  position: absolute; inset: 0; transform-origin: 0 50%;
   opacity: calc(var(--in) * (1 - var(--out)));
-  transform: translate3d(0, calc((1 - var(--in)) * 5vh - var(--out) * 3.5vh), 0) scale(calc(1 - var(--out) * 0.012));
+  /* a sheet settles onto the stack, and is lifted off like a page turning on its left edge */
+  transform:
+    translate3d(0, calc((1 - var(--in)) * 3vh - var(--out) * 1.6vh), 0)
+    rotateY(calc(var(--out) * -7deg));
   will-change: transform, opacity;
 }
 [data-dm="cinematic"] .d-page[data-last="true"] { --out: 0; }
 [data-dm="cinematic"] .d-page[data-active="false"] { visibility: hidden; pointer-events: none; }
 
+/* The type scale follows the width of the sheet; --fit (set by Dossier.tsx) shrinks it only as far as
+   a dense page needs so that nothing is ever clipped. */
 [data-dm="cinematic"] .d-sheet {
-  height: 100%; overflow: hidden; font-size: clamp(0.76rem, min(1.85vh, 1.3vw), 1.08rem);
-  padding: clamp(1rem, 2.4vh, 1.9rem) clamp(1.4rem, 3.6vw, 3.2rem) clamp(0.8rem, 1.8vh, 1.3rem);
+  height: 100%; overflow: hidden;
+  font-size: calc(var(--fit, 1) * clamp(0.7rem, 2.3cqw, 1.02rem));
+  padding: clamp(1rem, 4.4cqw, 2rem) clamp(1.1rem, 5.4cqw, 2.4rem) clamp(0.8rem, 3cqw, 1.4rem);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
-[data-dm="cinematic"] .d-body { padding-top: clamp(0.8rem, 2.2vh, 1.5rem); }
-[data-dm="cinematic"] .d-runfoot { margin-top: clamp(0.6rem, 1.6vh, 1.2rem); }
-[data-dm="cinematic"] .d-cover-name { font-size: clamp(3.4rem, min(9.6vw, 18vh), 9.2rem); }
-[data-dm="cinematic"] .d-cover-role { font-size: clamp(0.8rem, min(1.35vw, 2.4vh), 1.1rem); }
-[data-dm="cinematic"] .d-cover-contents { display: flex !important; }
-[data-dm="cinematic"] .d-cover-bottom { font-size: 0.74rem; }
-[data-dm="cinematic"] .d-cover-bottom > div { max-width: 24rem; }
+[data-dm="cinematic"] .d-body { padding-top: clamp(0.8rem, 2.4cqw, 1.5rem); }
+[data-dm="cinematic"] .d-runfoot { margin-top: clamp(0.6rem, 2cqw, 1.2rem); }
 
 /* ==========================================================================================
    STATIC (reduced motion, or "Plain view"): an ordinary document, nothing animates
    ========================================================================================== */
 [data-dm="static"] .d-orn { display: none; }
-[data-dm="static"] .d-cover-wrap { position: static; height: auto; display: block; padding: calc(var(--topbar) + 1rem) 0.75rem 0.75rem; }
-[data-dm="static"] .d-lid-holder { width: 100%; height: auto; perspective: none; max-width: 1100px; margin: 0 auto; }
-[data-dm="static"] .d-folder-base, [data-dm="static"] .d-lid-back { display: none; }
-[data-dm="static"] .d-lid { position: relative; transform: none !important; will-change: auto; }
-[data-dm="static"] .d-lid-face { position: relative; opacity: 1 !important; }
+[data-dm="static"] .d-track { padding-left: var(--side); }
+[data-dm="static"] .d-cover-wrap { position: static; height: auto; display: block; overflow: visible; padding: 1rem 0.75rem 0.75rem; }
+[data-dm="static"] .d-lid-holder {
+  width: 100%; height: auto; max-width: 1100px; margin: 0 auto; transform: none; will-change: auto;
+}
+[data-dm="static"] .d-folder-base, [data-dm="static"] .d-lid-back, [data-dm="static"] .d-spacer { display: none; }
+[data-dm="static"] .d-lid { position: relative; transform: none; will-change: auto; }
+[data-dm="static"] .d-lid-face { position: relative; inset: auto; }
 [data-dm="static"] .d-lid-front::before, [data-dm="static"] .d-lid-front::after { display: none; }
-[data-dm="static"] .d-cover { position: relative; inset: auto; padding: 2.2rem 1.6rem; }
-[data-dm="static"] .d-frame { border-radius: 10px; margin: 0 0.75rem; max-width: 1100px; margin-inline: auto; }
+[data-dm="static"] .d-cover {
+  position: relative; left: auto; top: auto; width: auto; height: auto; container-type: normal;
+  transform: none; opacity: 1;
+}
+[data-dm="static"] .d-print { position: relative; inset: auto; padding: 2.2rem 1.6rem; }
+[data-dm="static"] .d-cover-name { font-size: clamp(2.8rem, 8vw, 5.4rem); }
+[data-dm="static"] .d-cover-role { font-size: clamp(0.8rem, 2.4vw, 1rem); }
+[data-dm="static"] .d-frame { margin: 0 auto; max-width: 1100px; border-radius: 10px; }
 
-/* Short screens in flow mode on wide viewports: let the sheets breathe */
+/* Wider flow / static sheets get room to breathe */
 @media (min-width: 900px) {
   [data-dm="flow"] .d-sheet, [data-dm="static"] .d-sheet { padding: 1.6rem 2rem 1.3rem; }
   [data-dm="flow"] .d-pages, [data-dm="static"] .d-pages { max-width: 1100px; margin-inline: auto; width: 100%; }
