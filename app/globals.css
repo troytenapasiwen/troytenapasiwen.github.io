@@ -1,8 +1,5 @@
 @import "tailwindcss";
 
-/* Dark mode is controlled by a "dark" class on <html>, not the OS setting alone */
-@custom-variant dark (&:where(.dark, .dark *));
-
 /* ------------------------------------------------------------------------------------------
    Colour tokens. Change these values and the whole site updates.
    --desk   the surface the dossier sits on
@@ -23,23 +20,7 @@
   --folder-2: #2a2b30;
   --folder-ink: #efe9dc;
   --folder-mute: #a9a498;
-  --accent-dk: #5fcfc2; /* accent on the dark folder */
-}
-
-.dark {
-  --bg: #171614;
-  --fg: #ece8e1;
-  --muted: #a09a90;
-  --line: #35322d;
-  --accent: #5fcfc2;
-
-  --desk: #0c0c0b;
-  --paper: #1b1a18;
-  --rule: #38352f;
-  --folder: #2b2c31;
-  --folder-2: #36373d;
-  --folder-ink: #f1ece0;
-  --folder-mute: #9f9a8d;
+  --accent-dk: #5fcfc2; /* accent on the dossier folder */
 }
 
 /* Expose the tokens to Tailwind: bg-paper, border-rule, text-muted, text-accent ... */
@@ -314,6 +295,33 @@ body {
 .d-col { display: flex; flex-direction: column; gap: 0.8em; min-width: 0; }
 .d-col-center { justify-content: center; }
 .d-col-about { gap: 0.9em; }
+.d-portrait {
+  width: min(100%, 430px);
+  margin: clamp(1rem, 4vh, 2.5rem) auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.d-portrait-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 0.82;
+  object-fit: cover;
+  object-position: center top;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  filter: saturate(0.84) contrast(1.02);
+  box-shadow: 0 24px 52px -32px rgba(0, 0, 0, 0.65);
+}
+.d-portrait-caption {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: right;
+}
 .d-stack { display: flex; flex-direction: column; gap: clamp(0.9rem, 2vh, 1.5rem); flex: 1; min-height: 0; }
 .d-head { display: flex; flex-direction: column; gap: 0.45em; }
 .d-center-block { margin-block: auto; display: flex; flex-direction: column; gap: 0.9em; max-width: 46em; }

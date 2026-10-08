@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { navItems, site } from "@/data/site";
-import ThemeToggle from "@/components/layout/ThemeToggle";
 
 type Props = {
   active: string | null;
@@ -73,7 +72,6 @@ export default function Topbar({ active, onJump, plain, canToggle, onTogglePlain
               {plain ? "Animated view" : "Plain view"}
             </button>
           )}
-          <ThemeToggle />
         </div>
       </div>
       <div className="d-progress" aria-hidden="true">

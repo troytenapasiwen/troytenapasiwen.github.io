@@ -17,15 +17,6 @@ export const site = {
   emailAddress: "troytenapasiwen@gmail.com",
   // Set this to "/resume.pdf" once you add the file to /public
   resume: null as string | null,
-
-  intro:
-    "I’m a recent Information Technology graduate specializing in mobile and web applications, with hands-on experience building and testing web and mobile software. I’m also exploring LLM applications and AI-assisted development, including a locally hosted AI Resume Analyzer built with Python and Llama 3.2.",
-
-  about: [
-    "I’m a BS Information Technology graduate from National University – Manila, specializing in Mobile and Web Applications. My experience spans web and mobile development, software testing, UI/UX, databases, and business workflow applications.",
-    "During my internship, I worked on multiple business systems, including an Inventory Management System, Crewing Management System, Automated Forms Portal, and a company news website with an integrated CMS. I contributed to development, testing, UI/UX, application workflows, and IT support, while independently developing the Automated Forms Portal.",
-    "Outside of professional work, I’ve been building projects to deepen my development skills. My current focus includes locally hosted LLM applications and AI-assisted development, with a particular interest in how these tools can support practical software solutions.",
-  ],
 };
 
 // Order matches the dossier: About → Experience → Projects → Education → Skills → Contact.

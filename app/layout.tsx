@@ -34,19 +34,12 @@ export const metadata: Metadata = {
   },
 };
 
-// Runs before the page paints, so there is no theme flash and no layout jump.
-// 1. Applies the saved (or system) colour theme.
-// 2. Marks the page as script-enabled ("js") so the writing animations may hide text until it is written.
-// 3. Chooses the presentation (data-dm): "static" for reduced motion or the saved Plain view,
-//    "cinematic" for large screens, "flow" for everything else. Dossier.tsx keeps it up to date.
+// Runs before the page paints so the writing animations do not reveal before the page is ready.
+// It also chooses the presentation (data-dm): "static" for reduced motion or the saved Plain view,
+// "cinematic" for large screens, "flow" for everything else. Dossier.tsx keeps it up to date.
 const bootScript = `
 (function () {
   var d = document.documentElement;
-  try {
-    var t = localStorage.getItem("theme");
-    var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    if (t === "dark" || (!t && prefersDark)) d.classList.add("dark");
-  } catch (e) {}
   d.classList.add("js");
   var mode = "flow";
   try {

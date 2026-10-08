@@ -5,7 +5,6 @@ import { ArrowLeft } from "lucide-react";
 import { projects } from "@/data/projects";
 import { site } from "@/data/site";
 import TechTag from "@/components/ui/TechTag";
-import ThemeToggle from "@/components/layout/ThemeToggle";
 import { GitHubIcon } from "@/components/ui/BrandIcons";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -64,7 +63,6 @@ export default async function ProjectPage({ params }: Props) {
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to the dossier
         </Link>
-        <ThemeToggle />
       </div>
 
       <main

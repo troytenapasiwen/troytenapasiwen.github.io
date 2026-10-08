@@ -9,7 +9,7 @@ import { site, navItems } from "@/data/site";
  * Dossier.tsx) swings it open in CSS, so this component is plain static markup.
  *
  * `d-folder-base` is only used on mobile / tablet, where the lid opens over a
- * dark panel instead of over the pinned dossier frame.
+ * darker folder panel instead of over the pinned dossier frame.
  */
 export default function Folder() {
   return (

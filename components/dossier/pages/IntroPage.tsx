@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Page from "../Page";
 import Write, { Rule } from "../Write";
 import { sequence } from "../sequence";
@@ -19,19 +20,22 @@ export default function IntroPage() {
             {site.headline}
           </Write>
           <Rule className="d-rule-gap" {...q(30)} />
-          <Write as="p" mode="words" className="d-lead" {...q(site.intro)}>
-            {site.intro}
-          </Write>
-        </div>
-        <div className="d-col d-col-center d-col-about">
-          {site.about.map((paragraph) => (
-            <Write key={paragraph} as="p" mode="words" className="d-p" {...q(paragraph)}>
-              {paragraph}
-            </Write>
-          ))}
           <Write as="p" mode="words" className="d-meta" {...q(site.subtitle)}>
             {site.subtitle}
           </Write>
+        </div>
+        <div className="d-col d-col-center d-col-about">
+          <figure className="d-portrait">
+            <Image
+              src="/troy.jpg"
+              alt="Portrait of Troy Pasiwen"
+              width={900}
+              height={1100}
+              priority
+              className="d-portrait-image"
+            />
+            <figcaption className="d-portrait-caption">Troy Pasiwen</figcaption>
+          </figure>
         </div>
       </div>
     </Page>
