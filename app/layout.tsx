@@ -34,9 +34,10 @@ export const metadata: Metadata = {
   },
 };
 
-// Runs before the page paints so the writing animations do not reveal before the page is ready.
-// It also chooses the presentation (data-dm): "static" for reduced motion or the saved Plain view,
-// "cinematic" for large screens, "flow" for everything else. Dossier.tsx keeps it up to date.
+// Runs before the page paints, so there is no flash and no layout jump.
+// 1. Marks the page as script-enabled ("js") so the entrance and writing animations may hide things until their moment.
+// 2. Chooses the presentation (data-dm): "static" for reduced motion or the saved Plain view,
+//    "cinematic" for large screens, "flow" for everything else. Dossier.tsx keeps it up to date.
 const bootScript = `
 (function () {
   var d = document.documentElement;
