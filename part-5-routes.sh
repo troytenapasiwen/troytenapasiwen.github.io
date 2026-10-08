@@ -1,3 +1,51 @@
+#!/usr/bin/env bash
+# Run from the project root (the folder that contains package.json).
+set -e
+[ -f package.json ] || { echo "Run this from the project root (package.json not found)."; exit 1; }
+mkdir -p "app"
+cat > 'app/page.tsx' <<'EOF'
+import Dossier from "@/components/dossier/Dossier";
+import Folder from "@/components/dossier/Folder";
+import IntroPage from "@/components/dossier/pages/IntroPage";
+import {
+  ExperienceOverviewPage,
+  SystemPage,
+  SeakerPage,
+  RecruitmentPage,
+  experienceJobs,
+} from "@/components/dossier/pages/ExperiencePages";
+import { AnalyzerPage, ReinaPage } from "@/components/dossier/pages/ProjectPages";
+import EducationPage from "@/components/dossier/pages/EducationPage";
+import SkillsPage from "@/components/dossier/pages/SkillsPage";
+import ContactPage from "@/components/dossier/pages/ContactPage";
+
+/**
+ * The home page is one continuous dossier. The order of the pages here must match
+ * PAGES in components/dossier/timeline.ts.
+ */
+export default function Home() {
+  const { iwsc } = experienceJobs;
+  return (
+    <Dossier cover={<Folder />}>
+      <IntroPage />
+      <ExperienceOverviewPage />
+      <SystemPage pageId="exp-inventory" job={iwsc} systemName="Inventory Management System" entry={1} entries={3} />
+      <SystemPage pageId="exp-crewing" job={iwsc} systemName="Crewing Management System" entry={2} entries={3} />
+      <SystemPage pageId="exp-forms" job={iwsc} systemName="Automated Forms Portal" entry={3} entries={3} />
+      <SeakerPage />
+      <RecruitmentPage />
+      <AnalyzerPage />
+      <ReinaPage />
+      <EducationPage />
+      <SkillsPage />
+      <ContactPage />
+    </Dossier>
+  );
+}
+EOF
+echo "wrote app/page.tsx"
+mkdir -p "app/projects/[slug]"
+cat > 'app/projects/[slug]/page.tsx' <<'EOF'
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -134,3 +182,5 @@ export default async function ProjectPage({ params }: Props) {
     </div>
   );
 }
+EOF
+echo "wrote app/projects/[slug]/page.tsx"

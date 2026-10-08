@@ -1,3 +1,239 @@
+#!/usr/bin/env bash
+# Run from the project root (the folder that contains package.json).
+set -e
+[ -f package.json ] || { echo "Run this from the project root (package.json not found)."; exit 1; }
+# Remove the old sidebar layout and section components that the dossier replaces.
+rm -f components/sections/*.tsx components/layout/Sidebar.tsx components/layout/MobileNav.tsx components/layout/NavLinks.tsx components/ui/Section.tsx
+rmdir components/sections 2>/dev/null || true
+mkdir -p "data"
+cat > 'data/site.ts' <<'EOF'
+export const site = {
+  name: "Troy Pasiwen",
+  role: "Software Developer",
+  focus: "Web, Mobile & AI",
+  headline: "Software Developer | Web, Mobile & AI",
+  subtitle: "BS Information Technology, National University – Manila",
+  description:
+    "Portfolio of Troy Pasiwen, a recent BS Information Technology graduate with hands-on experience in web and mobile development, software testing, and business applications.",
+  url: "https://troytenapasiwen.github.io",
+  domain: "troytenapasiwen.github.io",
+  handle: "troytenapasiwen",
+  links: {
+    github: "https://github.com/troytenapasiwen",
+    linkedin: "https://www.linkedin.com/in/troypasiwen/",
+    email: "mailto:troytenapasiwen@gmail.com",
+  },
+  emailAddress: "troytenapasiwen@gmail.com",
+  // Set this to "/resume.pdf" once you add the file to /public
+  resume: null as string | null,
+
+  intro:
+    "I’m a recent Information Technology graduate specializing in mobile and web applications, with hands-on experience building and testing web and mobile software. I’m also exploring LLM applications and AI-assisted development, including a locally hosted AI Resume Analyzer built with Python and Llama 3.2.",
+
+  about: [
+    "I’m a BS Information Technology graduate from National University – Manila, specializing in Mobile and Web Applications. My experience spans web and mobile development, software testing, UI/UX, databases, and business workflow applications.",
+    "During my internship, I worked on multiple business systems, including an Inventory Management System, Crewing Management System, Automated Forms Portal, and a company news website with an integrated CMS. I contributed to development, testing, UI/UX, application workflows, and IT support, while independently developing the Automated Forms Portal.",
+    "Outside of professional work, I’ve been building projects to deepen my development skills. My current focus includes locally hosted LLM applications and AI-assisted development, with a particular interest in how these tools can support practical software solutions.",
+  ],
+};
+
+// Order matches the dossier: About → Experience → Projects → Education → Skills → Contact.
+// `title` is the heading used inside the dossier; `label` is the short navigation label.
+export const navItems = [
+  { id: "about", label: "About", title: "Introduction" },
+  { id: "experience", label: "Experience", title: "Experience" },
+  { id: "projects", label: "Projects", title: "Projects" },
+  { id: "education", label: "Education", title: "Education" },
+  { id: "skills", label: "Skills", title: "Skills" },
+  { id: "contact", label: "Contact", title: "Contact" },
+];
+EOF
+echo "wrote data/site.ts"
+mkdir -p "data"
+cat > 'data/projects.ts' <<'EOF'
+export type Project = {
+  slug: string;
+  title: string;
+  kind: string;
+  date: string;
+  summary: string;
+  tags: string[];
+  overview: string;
+  purpose?: string;
+  problem?: string; // add your own text to show a "Problem" section
+  how?: string[];
+  role?: string[];
+  learned?: string[]; // add your own notes to show "What I learned"
+  repo?: string;
+  // Optional, used by the dossier view only. Both are restatements of facts already in this file.
+  pipeline?: { step: string; label: string }[];
+  testing?: string[];
+};
+
+export const projects: Project[] = [
+  {
+    slug: "ai-resume-analyzer",
+    title: "AI Resume Analyzer",
+    kind: "Personal project",
+    date: "Oct 2026",
+    summary:
+      "Compares a resume against a job description using a locally hosted LLM, and generates feedback through structured JSON validation.",
+    tags: ["Python", "Streamlit", "Ollama", "Llama 3.2", "Pydantic"],
+    overview:
+      "An AI-powered resume analysis tool that compares a resume against a job description using a locally hosted LLM. The application uses structured JSON validation with Pydantic to generate relevant resume feedback.",
+    purpose:
+      "The project explores how locally hosted LLMs can be used to provide practical resume analysis without relying on a cloud-hosted LLM API.",
+    how: [
+      "Takes a resume and a job description and compares them.",
+      "Runs the analysis on Llama 3.2, hosted locally through Ollama. No cloud AI API is used.",
+      "Uses structured JSON validation with Pydantic to generate relevant resume feedback.",
+      "Built with Python and Streamlit.",
+    ],
+    role: ["Personally built the project."],
+    repo: "https://github.com/troytenapasiwen/ai-resume-analyzer",
+    pipeline: [
+      { step: "Input", label: "Resume and job description" },
+      { step: "Analysis", label: "Llama 3.2 via Ollama, hosted locally" },
+      { step: "Validation", label: "Structured JSON with Pydantic" },
+      { step: "Output", label: "Resume feedback" },
+    ],
+  },
+  {
+    slug: "reina-pabili-services",
+    title: "REINA Pabili Services",
+    kind: "Academic project · Capstone",
+    date: "Sept 2024 – Nov 2025",
+    summary:
+      "A mobile and web food delivery platform developed as my capstone project.",
+    tags: ["Node.js", "Express.js", "PostgreSQL", "Google Maps Directions API"],
+    overview:
+      "REINA Pabili Services is a mobile and web food delivery platform developed as my capstone project using Node.js, Express.js, PostgreSQL, and the Google Maps Directions API.",
+    role: [
+      "Initiated and coordinated the project.",
+      "Managed timelines, tasks, requirements, and documentation.",
+      "Contributed to development.",
+      "Conducted functional, integration, performance, accessibility, compatibility, and security testing.",
+    ],
+    testing: [
+      "Functional",
+      "Integration",
+      "Performance",
+      "Accessibility",
+      "Compatibility",
+      "Security",
+    ],
+  },
+];
+EOF
+echo "wrote data/projects.ts"
+mkdir -p "app"
+cat > 'app/layout.tsx' <<'EOF'
+import type { Metadata } from "next";
+import { Geist, Geist_Mono, Newsreader } from "next/font/google";
+import "./globals.css";
+import { site } from "@/data/site";
+
+const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const serif = Newsreader({ variable: "--font-newsreader", subsets: ["latin"] });
+
+const ogAlt = `${site.name} | ${site.headline}`;
+
+export const metadata: Metadata = {
+  metadataBase: new URL(site.url),
+  title: {
+    default: `${site.name} | ${site.role}`,
+    template: `%s | ${site.name}`,
+  },
+  description: site.description,
+  authors: [{ name: site.name, url: site.url }],
+  creator: site.name,
+  openGraph: {
+    title: `${site.name} | ${site.role}`,
+    description: site.description,
+    url: site.url,
+    siteName: site.name,
+    type: "website",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: ogAlt }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${site.name} | ${site.role}`,
+    description: site.description,
+    images: ["/og.png"],
+  },
+};
+
+// Runs before the page paints, so there is no theme flash and no layout jump.
+// 1. Applies the saved (or system) colour theme.
+// 2. Marks the page as script-enabled ("js") so the writing animations may hide text until it is written.
+// 3. Chooses the presentation (data-dm): "static" for reduced motion or the saved Plain view,
+//    "cinematic" for large screens, "flow" for everything else. Dossier.tsx keeps it up to date.
+const bootScript = `
+(function () {
+  var d = document.documentElement;
+  try {
+    var t = localStorage.getItem("theme");
+    var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (t === "dark" || (!t && prefersDark)) d.classList.add("dark");
+  } catch (e) {}
+  d.classList.add("js");
+  var mode = "flow";
+  try {
+    var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var plain = false;
+    try { plain = localStorage.getItem("dossier-view") === "plain"; } catch (e) {}
+    if (reduced || plain) mode = "static";
+    else if (window.matchMedia("(min-width: 1024px) and (min-height: 620px)").matches) mode = "cinematic";
+  } catch (e) {}
+  d.setAttribute("data-dm", mode);
+})();
+`;
+
+const personJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: site.name,
+  url: site.url,
+  jobTitle: site.role,
+  alumniOf: { "@type": "CollegeOrUniversity", name: "National University – Manila" },
+  sameAs: [site.links.github, site.links.linkedin],
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${sans.variable} ${mono.variable} ${serif.variable}`}
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: bootScript }} />
+      </head>
+      <body>
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded focus:bg-fg focus:px-3 focus:py-2 focus:text-sm focus:text-bg"
+        >
+          Skip to content
+        </a>
+        {children}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
+        />
+      </body>
+    </html>
+  );
+}
+EOF
+echo "wrote app/layout.tsx"
+mkdir -p "app"
+cat > 'app/globals.css' <<'EOF'
 @import "tailwindcss";
 
 /* Dark mode is controlled by a "dark" class on <html>, not the OS setting alone */
@@ -583,3 +819,48 @@ body {
 @media (max-width: 639px) {
   .d-cover-top span:last-child { display: none; }
 }
+EOF
+echo "wrote app/globals.css"
+mkdir -p .
+cat > 'README.md' <<'EOF'
+# Troy Pasiwen: Portfolio
+
+Personal portfolio for Troy Pasiwen, Software Developer | Web, Mobile & AI.
+
+Live site: https://troytenapasiwen.github.io
+GitHub: https://github.com/troytenapasiwen
+
+## Stack
+
+Next.js (App Router, static export), TypeScript, Tailwind CSS. No animation library: the folder, page turns and writing effects are CSS driven by a few custom properties that one small scroll loop updates. Deployed to GitHub Pages with GitHub Actions.
+
+## How the dossier works
+
+- `components/dossier/timeline.ts`: the order and scroll length of every page. Add or reorder pages here.
+- `components/dossier/Dossier.tsx`: the scroll engine (folder opening, page progress, navigation).
+- `components/dossier/Folder.tsx`: the cover.
+- `components/dossier/Write.tsx` and `sequence.ts`: the "being written" effect and its timing.
+- `components/dossier/pages/`: one file per scene (introduction, experience, projects, education, skills, contact).
+- `app/globals.css`: colour tokens at the top, then every dossier style.
+
+Three presentations share the same markup, chosen before first paint: **cinematic** (large screens), **flow** (phones and tablets), and **static** (reduced motion, or the "Plain view" button).
+
+## Updating content
+
+All content lives in `data/`:
+
+- `site.ts`: name, headline, intro, About, links
+- `experience.ts`: internship systems
+- `projects.ts`: personal and academic projects (each also gets a page at `/projects/<slug>`)
+- `skills.ts`, `education.ts`
+
+## Commands
+
+```bash
+npm run dev     # local development
+npm run build   # static export to ./out
+```
+
+Internship systems are described at a high level. Specific implementation details of company systems are not publicly disclosed due to confidentiality.
+EOF
+echo "wrote README.md"

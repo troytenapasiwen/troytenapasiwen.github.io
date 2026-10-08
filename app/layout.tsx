@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import { site } from "@/data/site";
-import Sidebar from "@/components/layout/Sidebar";
-import MobileNav from "@/components/layout/MobileNav";
 
 const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -18,6 +16,8 @@ export const metadata: Metadata = {
     template: `%s | ${site.name}`,
   },
   description: site.description,
+  authors: [{ name: site.name, url: site.url }],
+  creator: site.name,
   openGraph: {
     title: `${site.name} | ${site.role}`,
     description: site.description,
@@ -34,18 +34,41 @@ export const metadata: Metadata = {
   },
 };
 
-// Runs before the page paints, so there is no light-to-dark flash on load.
-const themeScript = `
+// Runs before the page paints, so there is no theme flash and no layout jump.
+// 1. Applies the saved (or system) colour theme.
+// 2. Marks the page as script-enabled ("js") so the writing animations may hide text until it is written.
+// 3. Chooses the presentation (data-dm): "static" for reduced motion or the saved Plain view,
+//    "cinematic" for large screens, "flow" for everything else. Dossier.tsx keeps it up to date.
+const bootScript = `
 (function () {
+  var d = document.documentElement;
   try {
     var t = localStorage.getItem("theme");
     var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    if (t === "dark" || (!t && prefersDark)) {
-      document.documentElement.classList.add("dark");
-    }
+    if (t === "dark" || (!t && prefersDark)) d.classList.add("dark");
   } catch (e) {}
+  d.classList.add("js");
+  var mode = "flow";
+  try {
+    var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var plain = false;
+    try { plain = localStorage.getItem("dossier-view") === "plain"; } catch (e) {}
+    if (reduced || plain) mode = "static";
+    else if (window.matchMedia("(min-width: 1024px) and (min-height: 620px)").matches) mode = "cinematic";
+  } catch (e) {}
+  d.setAttribute("data-dm", mode);
 })();
 `;
+
+const personJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: site.name,
+  url: site.url,
+  jobTitle: site.role,
+  alumniOf: { "@type": "CollegeOrUniversity", name: "National University – Manila" },
+  sameAs: [site.links.github, site.links.linkedin],
+};
 
 export default function RootLayout({
   children,
@@ -59,30 +82,20 @@ export default function RootLayout({
       className={`${sans.variable} ${mono.variable} ${serif.variable}`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: bootScript }} />
       </head>
-      <body className="lg:flex">
+      <body>
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-fg focus:px-3 focus:py-2 focus:text-sm focus:text-bg"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-100 focus:rounded focus:bg-fg focus:px-3 focus:py-2 focus:text-sm focus:text-bg"
         >
           Skip to content
         </a>
-        <Sidebar />
-        <div className="min-w-0 flex-1">
-          <MobileNav />
-          <main
-            id="main"
-            className="mx-auto max-w-2xl px-6 py-12 lg:px-12 lg:py-24"
-          >
-            {children}
-          </main>
-          <footer className="mx-auto max-w-2xl px-6 pb-8 lg:px-12">
-            <div className="border-t border-line pt-8 text-xs text-muted">
-              © {new Date().getFullYear()} {site.name}
-            </div>
-          </footer>
-        </div>
+        {children}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
+        />
       </body>
     </html>
   );

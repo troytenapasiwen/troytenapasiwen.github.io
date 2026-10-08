@@ -12,6 +12,9 @@ export type Project = {
   role?: string[];
   learned?: string[]; // add your own notes to show "What I learned"
   repo?: string;
+  // Optional, used by the dossier view only. Both are restatements of facts already in this file.
+  pipeline?: { step: string; label: string }[];
+  testing?: string[];
 };
 
 export const projects: Project[] = [
@@ -35,6 +38,12 @@ export const projects: Project[] = [
     ],
     role: ["Personally built the project."],
     repo: "https://github.com/troytenapasiwen/ai-resume-analyzer",
+    pipeline: [
+      { step: "Input", label: "Resume and job description" },
+      { step: "Analysis", label: "Llama 3.2 via Ollama, hosted locally" },
+      { step: "Validation", label: "Structured JSON with Pydantic" },
+      { step: "Output", label: "Resume feedback" },
+    ],
   },
   {
     slug: "reina-pabili-services",
@@ -51,6 +60,14 @@ export const projects: Project[] = [
       "Managed timelines, tasks, requirements, and documentation.",
       "Contributed to development.",
       "Conducted functional, integration, performance, accessibility, compatibility, and security testing.",
+    ],
+    testing: [
+      "Functional",
+      "Integration",
+      "Performance",
+      "Accessibility",
+      "Compatibility",
+      "Security",
     ],
   },
 ];
