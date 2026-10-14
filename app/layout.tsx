@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import { site } from "@/data/site";
+import { MIN_SINGLE_HEIGHT, REDUCED_QUERY, SPREAD_QUERY, computeGeometry } from "@/components/dossier/geometry";
+import { TIMELINES } from "@/components/dossier/timeline";
 
 const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -35,22 +37,36 @@ export const metadata: Metadata = {
 };
 
 // Runs before the page paints, so there is no flash and no layout jump.
-// 1. Marks the page as script-enabled ("js") so the entrance and writing animations may hide things until their moment.
-// 2. Chooses the presentation (data-dm): "static" for reduced motion or the saved Plain view,
-//    "cinematic" for large screens, "flow" for everything else. Dossier.tsx keeps it up to date.
+// 1. Marks the page as script-enabled ("js").
+// 2. Chooses the presentation (data-dm): "static" for reduced motion, the saved Plain view or a window too
+//    short for a page; "spread" (two pages) for large landscape windows; "single" for everything else.
+// 3. Gives the folder its final size and the scroll track its length, using the SAME geometry function
+//    Dossier.tsx uses, so the first frame is already correct and hydration changes nothing.
+// Dossier.tsx keeps all of this up to date afterwards.
 const bootScript = `
 (function () {
   var d = document.documentElement;
   d.classList.add("js");
-  var mode = "flow";
+  var mode = "single";
   try {
-    var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var plain = false;
     try { plain = localStorage.getItem("dossier-view") === "plain"; } catch (e) {}
-    if (reduced || plain) mode = "static";
-    else if (window.matchMedia("(min-width: 1024px) and (min-height: 620px)").matches) mode = "cinematic";
+    if (window.matchMedia(${JSON.stringify(REDUCED_QUERY)}).matches || plain) mode = "static";
+    else if (window.matchMedia(${JSON.stringify(SPREAD_QUERY)}).matches) mode = "spread";
+    else if (window.innerHeight < ${MIN_SINGLE_HEIGHT}) mode = "static";
   } catch (e) {}
   d.setAttribute("data-dm", mode);
+  if (mode === "static") return;
+  try {
+    var g = (${computeGeometry.toString()})(mode, window.innerWidth, window.innerHeight, 0, 0);
+    var s = d.style;
+    s.setProperty("--pw", g.pw + "px");
+    s.setProperty("--ph", g.ph + "px");
+    s.setProperty("--ls", g.ls.toFixed(4));
+    s.setProperty("--dip", g.dip.toFixed(4));
+    s.setProperty("--dy", g.dy + "px");
+    s.setProperty("--total", mode === "spread" ? "${TIMELINES.spread.total.toFixed(3)}" : "${TIMELINES.single.total.toFixed(3)}");
+  } catch (e) {}
 })();
 `;
 

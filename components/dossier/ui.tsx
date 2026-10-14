@@ -7,7 +7,7 @@ export function Bullets({ items, q }: { items: string[]; q: Seq }) {
   return (
     <ul className="d-bullets">
       {items.map((text) => (
-        <Write key={text} as="li" mode="words" {...q(text)}>
+        <Write key={text} as="li" mode="block" {...q()}>
           {text}
         </Write>
       ))}
@@ -26,14 +26,13 @@ export function TagList({
   q: Seq;
 }) {
   if (items.length === 0) return null;
-  const { s, d } = q(items.length * 8);
+  const { s, d } = q();
   const last = Math.max(items.length - 1, 1);
   return (
     <ul
       className="write write-stagger d-tags"
       style={timing(s, d)}
-      data-write=""
-      aria-label={label}
+            aria-label={label}
     >
       {items.map((item, i) => (
         <li
@@ -51,7 +50,7 @@ export function TagList({
 /** Small mono caption above a block of text. */
 export function Caption({ q, children }: { q: Seq; children: string }) {
   return (
-    <Write as="h4" mode="line" className="d-caption" {...q(children)}>
+    <Write as="h4" mode="block" className="d-caption" {...q()}>
       {children}
     </Write>
   );
@@ -75,7 +74,7 @@ export function RoleNote({
       as="p"
       mode="block"
       className={`d-rolenote ${solo ? "d-rolenote-solo" : ""}`}
-      {...q(children)}
+      {...q()}
     >
       {children}
     </Write>
@@ -90,7 +89,7 @@ export function Stamp({
   children: ReactNode;
 }) {
   return (
-    <Write as="p" mode="stamp" className="d-stamp" {...q(18)}>
+    <Write as="p" mode="stamp" className="d-stamp" {...q()}>
       {children}
     </Write>
   );

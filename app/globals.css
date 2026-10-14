@@ -63,30 +63,31 @@ body {
 
 /* ==========================================================================================
    PHYSICAL STATE
-   Dossier.tsx writes three numbers (0 → 1) onto the elements marked [data-drive]:
+   Dossier.tsx writes two numbers (0 → 1) onto the elements marked [data-drive]:
      --ra  rotation   0 = landscape      1 = portrait
-     --sb  sidebar    0 = hidden         1 = in place
      --op  opening    0 = closed         1 = open (right cover swung to the left)
+   and, on every sheet (surface), its own turn --t (0 → 1) and reveal progress --p (0 → 1).
    They are derived from the scroll position and from nothing else, which is why everything
-   reverses on its own when you scroll up. They are registered with inherits:false so changing
+   reverses on its own when you scroll back. They are registered with inherits:false so changing
    them restyles only the few driven elements, never the page text below them.
    ========================================================================================== */
 @property --ra { syntax: "<number>"; inherits: false; initial-value: 0; }
-@property --sb { syntax: "<number>"; inherits: false; initial-value: 0; }
 @property --op { syntax: "<number>"; inherits: false; initial-value: 0; }
 @property --a { syntax: "<number>"; inherits: false; initial-value: 0; }
 @property --e { syntax: "<number>"; inherits: false; initial-value: 0; }
-@property --sbe { syntax: "<number>"; inherits: false; initial-value: 0; }
 @property --arc { syntax: "<number>"; inherits: false; initial-value: 0; }
 @property --scale { syntax: "<number>"; inherits: false; initial-value: 1; }
 @property --turn { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
 @property --tx { syntax: "<number>"; inherits: false; initial-value: 0; }
 @property --ty { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --t { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --lc { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --te { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --sh { syntax: "<number>"; inherits: false; initial-value: 0; }
 
 [data-drive] {
   --a: calc(var(--ra) * var(--ra) * (3 - 2 * var(--ra)));      /* eased rotation */
   --e: calc(var(--op) * var(--op) * (3 - 2 * var(--op)));      /* eased opening */
-  --sbe: calc(var(--sb) * var(--sb) * (3 - 2 * var(--sb)));    /* eased sidebar */
   --arc: calc(4 * var(--a) * (1 - var(--a)));                  /* 0 → 1 → 0 while turning: the lift */
   --turn: calc((1 - var(--a)) * 90deg);                        /* quarter turn left to make */
   --scale: calc(var(--ls, 1) + (1 - var(--ls, 1)) * var(--a) - var(--arc) * var(--dip, 0)); /* landscape is larger; pulled back mid-turn so it fits */
@@ -94,139 +95,53 @@ body {
 
 /* No script, or the plain document: show the finished state, nothing staged. */
 html:not(.js) [data-drive],
-[data-dm="static"] [data-drive] { --ra: 1; --sb: 1; --op: 1; }
+[data-dm="static"] [data-drive] { --ra: 1; --op: 1; }
 
 /* ==========================================================================================
    THE DOSSIER
-   <html data-dm="cinematic | flow | static"> picks the presentation (see layout.tsx / Dossier.tsx).
-   Rules without a data-dm prefix describe "flow", which is also what you get without JavaScript.
+   <html data-dm="spread | single | static"> picks the presentation (see layout.tsx / Dossier.tsx).
+   Rules without a data-dm prefix describe the plain document, which is also what you get without
+   JavaScript. Folder geometry (--pw, --ph, --ls, --dip, --dy, --total) is written before first paint.
    ========================================================================================== */
-
-/* Folder geometry is written by Dossier.tsx (--pw, --ph, --side, --ls); these are the fallbacks. */
-.d-root {
-  position: relative; overflow-x: clip;
-  --pw: min(calc(100vw - 92px), 420px);
+:root {
+  --pw: min(calc(100vw - 28px), 420px);
   --ph: calc(var(--pw) / 0.72);
-  --side: 44px;
-  --ls: 1;
+  --ls: 1; --dip: 0; --dy: 0px; --total: 14;
+  --persp: 5400px;   /* one perspective for the lid and every sheet, so they always agree */
+  --bd: 14px;        /* the dark folder board around the paper */
+  --shift: 0;        /* how far (in pages) the folder slides right as it opens */
+  --zl: 5; --zf: 1; --zlz: 2px; --zfz: 1px;   /* lid above the pages while closed, below once open */
 }
-@media (min-width: 1024px) { .d-root { --side: 216px; } }
+[data-dm="spread"] { --shift: 0.5; }
+[data-dm="single"] { --bd: 12px; --persp: 9000px; }
+.d-root[data-lidtop="0"] { --zl: 1; --zf: 5; --zlz: 1px; --zfz: 2px; }
 
-/* ---------------------------------------------------------------- sidebar ---------------- */
-.d-sidebar {
-  position: fixed; inset: 0 auto 0 0; z-index: 60; width: var(--side);
-  container: side / inline-size;
-  display: flex; flex-direction: column;
-  background: var(--desk); border-right: 1px solid var(--rule);
-  opacity: var(--sbe);
-  transform: translate3d(calc((1 - var(--sbe)) * -100%), 0, 0);
-}
-.d-sidebar[data-on="0"] { visibility: hidden; pointer-events: none; }
+.d-root { position: relative; overflow-x: clip; }
 
-/* slim rail (phones, tablets): section numbers only */
-.d-brand { display: none; }
-.d-nav { padding-top: 1rem; overflow-y: auto; scrollbar-width: none; flex: 1; min-height: 0; }
-.d-nav::-webkit-scrollbar { display: none; }
-.d-nav ul { display: flex; flex-direction: column; list-style: none; margin: 0; padding: 0; gap: 0.2rem; }
-.d-nav a {
-  display: flex; align-items: center; justify-content: center; height: 2.7rem;
-  color: var(--muted); border-left: 2px solid transparent; transition: color 0.2s, border-color 0.2s;
+/* Measures the small viewport and the device safe areas (read by Dossier.tsx). */
+.d-probe {
+  position: fixed; left: 0; top: 0; width: 0; height: 100vh; height: 100svh; box-sizing: border-box;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+  visibility: hidden; pointer-events: none;
 }
-.d-nav a:hover { color: var(--fg); }
-.d-nav a[aria-current="location"] { color: var(--fg); border-left-color: var(--accent); background: rgba(0, 0, 0, 0.035); }
-.d-nav-no { font-family: var(--font-geist-mono), monospace; font-size: 0.7rem; color: var(--accent); }
-.d-nav-label {
-  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
-}
-.d-side-foot { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 0.8rem 0 0.9rem; }
-.d-folio { display: none; }
+
+/* "Plain view" / "Animated view": an accessibility affordance, not navigation. Tucked into the bottom
+   corner, inside the room the folder leaves free. */
 .d-toggle {
+  position: fixed; z-index: 60; left: max(10px, env(safe-area-inset-left, 0px));
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--muted);
-  border: 1px solid var(--rule); border-radius: 3px; width: 2rem; height: 2rem;
+  background: var(--desk); border: 1px solid var(--rule); border-radius: 3px; min-width: 2.25rem; height: 2.25rem; padding: 0 0.6rem;
   font-family: var(--font-geist-mono), monospace; font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase;
   transition: color 0.2s, border-color 0.2s;
 }
 .d-toggle:hover { color: var(--fg); border-color: var(--muted); }
 .d-toggle-text { display: none; }
-.d-progress { position: absolute; top: 0; bottom: 0; right: -1px; width: 2px; }
-.d-progress span {
-  display: block; width: 100%; height: 100%; background: var(--accent);
-  transform-origin: top; transform: scaleY(var(--gp, 0));
-}
-
-/* full sidebar (wide screens) */
-@container side (min-width: 150px) {
-  .d-brand { display: flex; flex-direction: column; gap: 0.2rem; padding: 1.7rem 1.4rem 0; }
-  .d-brand-name { font-family: var(--font-serif), serif; font-size: 1.3rem; letter-spacing: -0.01em; line-height: 1.1; }
-  .d-brand-sub {
-    font-family: var(--font-geist-mono), monospace; font-size: 0.6rem; letter-spacing: 0.16em;
-    text-transform: uppercase; color: var(--muted);
-  }
-  .d-nav { padding: 2.2rem 0 0; }
-  .d-nav ul { gap: 0; }
-  .d-nav a {
-    justify-content: flex-start; align-items: baseline; gap: 0.8rem; height: auto;
-    padding: 0.68rem 1.4rem 0.68rem 1.2rem; font-size: 0.92rem;
-  }
-  .d-nav-label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; }
-  .d-side-foot { align-items: stretch; padding: 0.9rem 1.4rem 1.3rem; border-top: 1px solid var(--rule); margin: 0 0 0; }
-  .d-folio { display: block; font-family: var(--font-geist-mono), monospace; font-size: 0.7rem; letter-spacing: 0.14em; color: var(--muted); }
-  .d-toggle { width: auto; height: auto; padding: 0.42rem 0.65rem; justify-content: flex-start; }
-  .d-toggle-text { display: inline; }
-}
-
-/* ---------------------------------------------------------------- structure (flow) ------- */
-.d-track { position: relative; }
-.d-stage, .d-object { display: contents; }
-.d-shadow { display: none; }
-
-/* The cover sticks to the top while the folder turns and opens, then the pages slide up over it. */
-.d-cover-wrap {
-  position: sticky; top: 0; z-index: 1; height: 100svh; overflow: clip;
-  display: grid; place-items: center;
-}
-/* Scroll distance during which the cover is pinned and plays its sequence. */
-.d-spacer { height: calc((var(--intro, 2.1) - 0.15) * 100svh); }
-.d-frame {
-  position: relative; z-index: 2; margin-left: var(--side);
-  background: var(--folder); padding: 0.75rem;
-  border-radius: 6px 6px 0 0; box-shadow: 0 -24px 48px -24px rgba(0, 0, 0, 0.5);
-}
-.d-frame-tab { display: none; }
-.d-pages { display: grid; gap: 0.75rem; }
-.d-page { container: page / inline-size; scroll-margin-top: 0.75rem; }
+@media (min-width: 640px) { .d-toggle-text { display: inline; } }
+:is([data-dm="static"], html:not(.js)) .d-toggle { position: static; margin: 0.75rem 0.75rem 0; width: fit-content; }
 
 /* ---------------------------------------------------------------- the folder ------------- */
 /* The folder shell is always built portrait; landscape is the same shell turned a quarter turn. */
-.d-lid-holder {
-  position: relative; width: var(--pw); height: var(--ph); transform-style: preserve-3d;
-  transform:
-    perspective(5200px)
-    translate3d(calc(var(--side) * 0.5 * var(--sbe)), calc(var(--arc) * -12px), 0)
-    rotateX(calc(var(--arc) * 8deg))
-    rotateY(calc(var(--arc) * -6deg))
-    scale(var(--scale))
-    rotateZ(var(--turn));
-  will-change: transform;
-}
-
-/* the board the lid opens over (phones / tablets) */
-.d-folder-base {
-  position: absolute; inset: 0; background: var(--folder); border-radius: 4px; padding: 12px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 24px 50px -24px rgba(0, 0, 0, 0.6), 0 0 36px rgba(40, 28, 10, 0.18);
-}
-.d-folder-inner {
-  height: 100%; background: var(--paper); border-radius: 2px; padding: 1.4rem;
-  display: flex; flex-direction: column; gap: 0.9rem;
-}
-.d-folder-inner span {
-  font-family: var(--font-geist-mono), monospace; font-size: 0.7rem; letter-spacing: 0.16em;
-  text-transform: uppercase; color: var(--accent);
-}
-.d-folder-inner i { display: block; height: 1px; background: var(--rule); }
-.d-folder-inner i:nth-of-type(2) { width: 82%; }
-.d-folder-inner i:nth-of-type(3) { width: 91%; }
-.d-folder-inner i:nth-of-type(4) { width: 64%; }
 
 /* the spine: the thickness of the fold the lid hinges on */
 .d-spine {
@@ -275,20 +190,6 @@ html:not(.js) [data-drive],
     var(--folder-2);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 16px 34px -16px rgba(0, 0, 0, 0.6);
   color: var(--folder-ink);
-}
-.d-lid-back-inner { position: absolute; inset: 0; padding: 12% 11%; display: flex; flex-direction: column; gap: 1.4rem; }
-.d-lid-back-inner ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.2rem; }
-.d-lid-back-inner li {
-  font-family: var(--font-serif), serif; font-size: clamp(1rem, calc(var(--pw) * 0.045), 1.7rem);
-  display: flex; gap: 1rem; align-items: baseline; padding: 0.35rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-.d-lid-back-inner li span {
-  font-family: var(--font-geist-mono), monospace; font-size: 0.65rem; color: var(--accent-dk);
-}
-.d-lid-back-foot {
-  margin-top: auto; font-family: var(--font-geist-mono), monospace; font-size: 0.62rem;
-  letter-spacing: 0.14em; text-transform: uppercase; color: var(--folder-mute);
 }
 
 /* tab and crop marks */
@@ -371,369 +272,335 @@ html:not(.js) [data-drive],
 .d-cover-cue svg { animation: d-cue 2.2s ease-in-out infinite; color: var(--accent-dk); }
 @keyframes d-cue { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
 
-/* ---------------------------------------------------------------- entrance --------------- */
-/* The page starts as background only. Dossier.tsx sets [data-in] after about a second and the
-   folder is presented: it settles up into place. (translate/opacity only: no layout, no repaint.) */
-.d-lid-holder, .d-object {
-  transition: opacity 0.9s ease, translate 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-html.js[data-dm="flow"] .d-root:not([data-in]) .d-lid-holder,
-html.js[data-dm="cinematic"] .d-root:not([data-in]) .d-object {
-  opacity: 0; translate: 0 38px;
-}
+/* ==========================================================================================
+   PLAIN DOCUMENT (base): reduced motion, "Plain view", windows too short for a page, or no JavaScript.
+   Also what animated modes are built on. Nothing here is positioned or animated.
+   ========================================================================================== */
+.d-track { position: relative; }
+.d-stage, .d-object { display: block; }
+.d-shadow { display: none; }
+.d-cover-wrap { display: block; padding: 1rem 0.75rem 0.75rem; }
+:is([data-dm="static"], html:not(.js)) .d-lid-holder { position: relative; width: 100%; max-width: 1100px; margin: 0 auto; }
+:is([data-dm="static"], html:not(.js)) .d-lid { position: relative; inset: auto; transform: none; will-change: auto; }
+:is([data-dm="static"], html:not(.js)) .d-lid-face { position: relative; inset: auto; }
+:is([data-dm="static"], html:not(.js)) .d-lid-back, :is([data-dm="static"], html:not(.js)) .d-spine, :is([data-dm="static"], html:not(.js)) .d-lid-front::before, :is([data-dm="static"], html:not(.js)) .d-lid-front::after, :is([data-dm="static"], html:not(.js)) .d-orn { display: none; }
+:is([data-dm="static"], html:not(.js)) .d-cover { position: relative; left: auto; top: auto; width: auto; height: auto; container-type: normal; transform: none; opacity: 1; }
+:is([data-dm="static"], html:not(.js)) .d-print { position: relative; inset: auto; padding: 2.2rem 1.6rem; }
+:is([data-dm="static"], html:not(.js)) .d-cover-name { font-size: clamp(2.8rem, 8vw, 5.4rem); }
+:is([data-dm="static"], html:not(.js)) .d-cover-role { font-size: clamp(0.8rem, 2.4vw, 1rem); }
+:is([data-dm="static"], html:not(.js)) .d-cover-cue, :is([data-dm="static"], html:not(.js)) .d-cover-contents { display: none; }
 
-/* ---------------------------------------------------------------- sheets (flow) ---------- */
+.d-frame { position: relative; margin: 0 auto; max-width: 1100px; background: var(--folder); padding: 0.75rem; border-radius: 10px; }
+.d-frame-tab { display: none; }
+.d-pages { display: grid; gap: 0.75rem; }
+.d-page { display: grid; gap: 0.75rem; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .d-page { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.d-surface { position: relative; scroll-margin-top: 0.75rem; }
+.d-face { position: relative; container: page / inline-size; }
+.d-back { display: none; }
+
+/* ---------------------------------------------------------------- the sheet --------------- */
+/* One sheet = header, body, footer, always stacked in normal flow: nothing can overlap. */
 .d-sheet {
-  position: relative; display: flex; flex-direction: column;
-  background: var(--paper); color: var(--fg);
-  border-radius: 4px; border: 1px solid var(--rule);
-  padding: 1.1rem 1.1rem 1rem; font-size: 1rem;
+  --px: clamp(1.1rem, 4.6cqw, 2.2rem); --py: clamp(0.9rem, 3.4cqw, 1.5rem);
+  position: relative; display: flex; flex-direction: column; min-width: 0;
+  background: var(--paper); color: var(--fg); border: 1px solid var(--rule); border-radius: 3px;
+  padding: var(--py) var(--px); font-size: 1rem; line-height: 1.5; overflow-wrap: break-word;
 }
 .d-runhead, .d-runfoot {
-  display: flex; justify-content: space-between; gap: 1rem;
+  display: flex; justify-content: space-between; align-items: baseline; gap: 0.4em 1rem; flex-wrap: wrap;
   font-family: var(--font-geist-mono), monospace; color: var(--muted);
 }
-.d-runhead {
-  font-size: 0.64rem; letter-spacing: 0.14em; text-transform: uppercase;
-  padding-bottom: 0.8rem; border-bottom: 1px solid var(--rule);
-}
-.d-runfoot {
-  font-size: 0.72rem; line-height: 1.45; border-top: 1px solid var(--rule);
-  padding-top: 0.8rem; margin-top: 1.4rem;
-}
-.d-runfoot-note { text-align: right; max-width: 38em; }
+.d-runhead { flex: none; font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; padding-bottom: 0.7rem; border-bottom: 1px solid var(--rule); }
+.d-runfoot { flex: none; min-height: 1.6rem; font-size: 0.72rem; line-height: 1.45; border-top: 1px solid var(--rule); padding-top: 0.7rem; }
+.d-runfoot-note { text-align: right; margin-left: auto; max-width: 40em; }
 .d-runfoot a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-.d-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-top: 1.2rem; }
-
-.d-cols { display: grid; gap: 1.6rem; align-content: start; flex: 1; min-height: 0; }
-.d-cols-intro { align-content: center; }
-@container page (min-width: 900px) {
-  .d-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(1.4rem, 3.4vw, 3.4rem); }
-  .d-cols-intro { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-content: center; align-items: center; }
-}
-.d-col { display: flex; flex-direction: column; gap: 0.8em; min-width: 0; }
-.d-col-center { justify-content: center; }
-.d-col-about { gap: 0.9em; }
-.d-stack { display: flex; flex-direction: column; gap: clamp(0.9rem, 2vh, 1.5rem); flex: 1; min-height: 0; }
-.d-head { display: flex; flex-direction: column; gap: 0.45em; }
-.d-center-block { margin-block: auto; display: flex; flex-direction: column; gap: 0.9em; max-width: 46em; }
+.d-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 1.1rem 0 1.1rem; }
+.d-stack { display: flex; flex-direction: column; gap: 0.95em; min-width: 0; }
+.d-stack-center { flex: 1 1 auto; justify-content: center; }
+.d-head { display: flex; flex-direction: column; gap: 0.75em; }
 .d-edu { display: flex; flex-direction: column; gap: 0.8em; }
 
-/* type */
-.d-act {
-  margin: 0; font-family: var(--font-serif), serif; font-weight: 400; font-size: 1.9em;
-  line-height: 1.05; letter-spacing: -0.015em;
-}
-.d-act-no {
-  font-family: var(--font-geist-mono), monospace; font-size: 0.36em; letter-spacing: 0.2em;
-  color: var(--accent); vertical-align: 0.95em; margin-right: 0.8em;
-}
-.d-display {
-  margin: 0; font-family: var(--font-serif), serif; font-weight: 400; font-size: 3.1em;
-  line-height: 1; letter-spacing: -0.025em;
-}
+/* ---------------------------------------------------------------- type ------------------- */
+/* Hierarchy: editorial title > section heading > body > metadata and labels > micro-labels. */
+.d-act { margin: 0; font-family: var(--font-serif), serif; font-weight: 400; font-size: 1.9em; line-height: 1.1; letter-spacing: -0.015em; }
+.d-act-no { font-family: var(--font-geist-mono), monospace; font-size: 0.38em; letter-spacing: 0.2em; color: var(--accent); vertical-align: 0.95em; margin-right: 0.8em; }
+.d-display { margin: 0; font-family: var(--font-serif), serif; font-weight: 400; font-size: 3.1em; line-height: 1; letter-spacing: -0.025em; }
 .d-display-md { font-size: 2.3em; line-height: 1.04; }
-.d-title { margin: 0; font-family: var(--font-serif), serif; font-weight: 400; font-size: 1.6em; line-height: 1.1; letter-spacing: -0.01em; }
+.d-title { margin: 0; font-family: var(--font-serif), serif; font-weight: 400; font-size: 1.6em; line-height: 1.12; letter-spacing: -0.01em; }
 .d-title-lg { font-size: 2em; }
-.d-title-sub { font-size: 1.3em; margin-top: 0.7em; }
+.d-title-sub { font-size: 1.35em; margin-top: 0.5em; }
 .d-company { margin: 0; font-weight: 500; font-size: 1.05em; }
-.d-meta { margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 0.78em; color: var(--muted); line-height: 1.5; }
-.d-kicker {
-  margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 0.68em; letter-spacing: 0.15em;
-  text-transform: uppercase; color: var(--accent); line-height: 1.5;
-}
-.d-caption {
-  margin: 0.55em 0 0; font-family: var(--font-geist-mono), monospace; font-weight: 400; font-size: 0.66em;
-  letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted);
-}
-.d-p { margin: 0; line-height: 1.55; }
-.d-lead { margin: 0; font-size: 1.1em; line-height: 1.55; }
-.d-lead-wide { max-width: 34em; }
-.d-role { margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 0.92em; color: var(--muted); }
+.d-meta { margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 0.82em; color: var(--muted); line-height: 1.55; }
+.d-kicker { margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 0.72em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); line-height: 1.55; }
+.d-caption { margin: 0.4em 0 0; font-family: var(--font-geist-mono), monospace; font-weight: 400; font-size: 0.7em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.d-p { margin: 0; line-height: 1.6; }
+.d-lead { margin: 0; font-size: 1.12em; line-height: 1.6; max-width: 34em; }
+.d-role { margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 0.95em; color: var(--muted); line-height: 1.5; }
 .d-muted { color: var(--muted); }
-
-.d-rolenote {
-  margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 0.74em; line-height: 1.5;
-  border-left: 2px solid var(--muted); padding: 0.15em 0 0.15em 0.8em; color: var(--fg);
-}
+.d-rolenote { margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 0.78em; line-height: 1.5; border-left: 2px solid var(--muted); padding: 0.15em 0 0.15em 0.8em; color: var(--fg); }
 .d-rolenote-solo { border-left-color: var(--accent); color: var(--accent); }
-.d-stamp {
-  display: inline-block; width: fit-content; margin: 1.2em 0 0;
-  font-family: var(--font-geist-mono), monospace; font-size: 0.78em; letter-spacing: 0.2em; text-transform: uppercase;
-  color: var(--accent); border: 2px solid var(--accent); border-radius: 3px; padding: 0.6em 1.1em;
-}
-
+.d-stamp { display: inline-block; width: fit-content; margin: 0.8em 0 0; font-family: var(--font-geist-mono), monospace; font-size: 0.8em; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); border: 2px solid var(--accent); border-radius: 3px; padding: 0.6em 1.1em; }
 .d-rule { height: 1px; width: 100%; background: var(--fg); opacity: 0.55; }
-.d-rule-gap { margin: 0.5em 0; }
+.d-rule-gap { margin: 0.4em 0; }
 
-.d-bullets { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.55em; }
-.d-bullets > li { position: relative; padding-left: 1.2em; line-height: 1.5; }
-.d-bullets > li::before {
-  content: ""; position: absolute; left: 0; top: 0.78em; width: 0.6em; height: 1px; background: var(--accent);
-  transform-origin: left; transform: scaleX(clamp(0, calc(var(--r) * 4), 1));
-}
-.d-tags { display: flex; flex-wrap: wrap; gap: 0.4em; list-style: none; margin: 0.4em 0 0; padding: 0; }
-.d-tag {
-  font-family: var(--font-geist-mono), monospace; font-size: 0.7em; color: var(--muted);
-  border: 1px solid var(--rule); border-radius: 2px; padding: 0.2em 0.55em;
-}
-
-/* archive index (experience overview) */
-.d-index { list-style: none; margin: 0; padding: 0; display: grid; }
-.d-index-row { display: grid; grid-template-columns: 2.4em 1fr; gap: 0.6em; padding: 0.65em 0; border-top: 1px solid var(--rule); }
-.d-index-row:last-child, .d-index > li:last-child .d-index-row { border-bottom: 1px solid var(--rule); }
-.d-index-no { font-family: var(--font-geist-mono), monospace; font-size: 0.74em; color: var(--accent); padding-top: 0.25em; }
-.d-index-name { display: block; font-family: var(--font-serif), serif; font-size: 1.15em; }
-.d-index-label { display: block; font-family: var(--font-geist-mono), monospace; font-size: 0.7em; color: var(--muted); margin-top: 0.2em; }
-.d-index-label.is-solo { color: var(--accent); }
-
-/* AI Resume Analyzer: pipeline strip */
-.d-pipe { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; border: 1px solid var(--rule); }
-.d-pipe-node { position: relative; display: flex; flex-direction: column; gap: 0.35em; padding: 0.8em 1em; }
-.d-pipe-node + .d-pipe-node { border-top: 1px solid var(--rule); }
-.d-pipe-step { font-family: var(--font-geist-mono), monospace; font-size: 0.64em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
-.d-pipe-label { font-family: var(--font-serif), serif; font-size: 1.1em; line-height: 1.25; }
-@container page (min-width: 700px) {
-  .d-pipe { grid-template-columns: repeat(4, 1fr); }
-  .d-pipe-node + .d-pipe-node { border-top: 0; border-left: 1px solid var(--rule); }
-  .d-pipe-node + .d-pipe-node::before {
-    content: "→"; position: absolute; left: -0.62em; top: 50%; translate: 0 -50%;
-    width: 1.2em; text-align: center; background: var(--paper); color: var(--accent);
-    font-family: var(--font-geist-mono), monospace; font-size: 0.9em; line-height: 1.6;
-  }
-}
-
-.d-foot-row {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.9em 1.4em;
-  border-top: 1px solid var(--rule); padding-top: 0.9em; margin-top: auto;
-}
-.d-foot-row .d-tags { margin: 0; }
-.d-links { display: flex; flex-wrap: wrap; gap: 0.6em; margin-top: 0.4em; }
-.d-foot-row .d-links { margin-top: 0; }
-.d-btn {
-  display: inline-flex; align-items: center; gap: 0.55em; padding: 0.55em 0.95em; font-size: 0.82em;
-  border: 1px solid var(--fg); background: var(--fg); color: var(--paper); border-radius: 3px;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
-}
+.d-bullets { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6em; }
+.d-bullets > li { position: relative; padding-left: 1.2em; line-height: 1.55; }
+.d-bullets > li::before { content: ""; position: absolute; left: 0; top: 0.8em; width: 0.6em; height: 1px; background: var(--accent); }
+.d-tags { display: flex; flex-wrap: wrap; gap: 0.45em; list-style: none; margin: 0; padding: 0; }
+.d-tag { font-family: var(--font-geist-mono), monospace; font-size: 0.76em; color: var(--muted); border: 1px solid var(--rule); border-radius: 2px; padding: 0.22em 0.6em; overflow-wrap: anywhere; }
+.d-links { display: flex; flex-wrap: wrap; gap: 0.6em; }
+.d-btn { display: inline-flex; align-items: center; gap: 0.55em; padding: 0.6em 1em; font-size: 0.86em; border: 1px solid var(--fg); background: var(--fg); color: var(--paper); border-radius: 3px; transition: background 0.2s, border-color 0.2s, color 0.2s; }
 .d-btn:hover { background: var(--accent); border-color: var(--accent); color: var(--paper); }
 .d-btn-ghost { background: transparent; color: var(--fg); border-color: var(--rule); }
 .d-btn-ghost:hover { background: transparent; color: var(--accent); border-color: var(--accent); }
 
-/* skills: system inventory */
-.d-inventory { display: grid; gap: clamp(0.8rem, 2.2vh, 1.4rem) 2rem; grid-template-columns: 1fr; }
-@container page (min-width: 420px) { .d-inventory { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@container page (min-width: 900px) { .d-inventory { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.d-inv-head {
-  display: flex; align-items: baseline; gap: 0.7em; margin: 0 0 0.35em; padding-bottom: 0.4em;
-  border-bottom: 1px solid var(--fg); font-family: var(--font-geist-mono), monospace; font-weight: 400;
-  font-size: 0.7em; letter-spacing: 0.14em; text-transform: uppercase;
+/* portrait */
+.d-portrait { margin: 0; display: flex; flex-direction: column; gap: 0.6em; flex: 1 1 auto; min-height: 0; }
+.d-portrait-image { display: block; width: 100%; height: auto; aspect-ratio: 9 / 11; max-height: 70vh; object-fit: cover; object-position: 50% 14%; border: 1px solid var(--rule); border-radius: 2px; }
+.d-portrait-caption { font-family: var(--font-geist-mono), monospace; font-size: 0.7em; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+
+/* archive index (experience overview) */
+.d-index { list-style: none; margin: 0; padding: 0; display: grid; }
+.d-index-row { display: grid; grid-template-columns: 2.4em minmax(0, 1fr); gap: 0.6em; padding: 0.7em 0; border-top: 1px solid var(--rule); }
+.d-index > li:last-child .d-index-row { border-bottom: 1px solid var(--rule); }
+.d-index-no { font-family: var(--font-geist-mono), monospace; font-size: 0.78em; color: var(--accent); padding-top: 0.25em; }
+.d-index-name { display: block; font-family: var(--font-serif), serif; font-size: 1.2em; line-height: 1.2; }
+.d-index-label { display: block; font-family: var(--font-geist-mono), monospace; font-size: 0.76em; color: var(--muted); margin-top: 0.25em; }
+.d-index-label.is-solo { color: var(--accent); }
+
+/* AI Resume Analyzer: process strip */
+.d-pipe { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); border: 1px solid var(--rule); }
+.d-pipe-node { display: flex; flex-direction: column; gap: 0.3em; padding: 0.7em 0.95em; }
+.d-pipe-node + .d-pipe-node { border-top: 1px solid var(--rule); }
+.d-pipe-step { font-family: var(--font-geist-mono), monospace; font-size: 0.68em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+.d-pipe-label { font-family: var(--font-serif), serif; font-size: 1.1em; line-height: 1.25; }
+@container page (min-width: 470px) {
+  .d-pipe { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .d-pipe-node:nth-child(2) { border-top: 0; border-left: 1px solid var(--rule); }
+  .d-pipe-node:nth-child(4) { border-left: 1px solid var(--rule); }
 }
+
+/* skills: system inventory */
+.d-inv-group { display: block; }
+.d-inv-head { display: flex; align-items: baseline; gap: 0.7em; margin: 0 0 0.4em; padding-bottom: 0.4em; border-bottom: 1px solid var(--fg); font-family: var(--font-geist-mono), monospace; font-weight: 400; font-size: 0.74em; letter-spacing: 0.14em; text-transform: uppercase; }
 .d-inv-letter { color: var(--accent); }
 .d-inv-count { margin-left: auto; color: var(--muted); }
-.d-inv-list { list-style: none; margin: 0; padding: 0; display: grid; }
-.d-inv-list li { display: flex; gap: 0.8em; padding: 0.12em 0; font-size: 0.95em; line-height: 1.3; border-bottom: 1px dotted var(--rule); }
-.d-inv-no { width: 1.9em; padding-top: 0.28em; font-family: var(--font-geist-mono), monospace; font-size: 0.68em; color: var(--muted); }
+.d-inv-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 2em; }
+@container page (min-width: 440px) { .d-inv-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.d-inv-list li { display: flex; gap: 0.8em; padding: 0.14em 0; font-size: 0.98em; line-height: 1.35; border-bottom: 1px dotted var(--rule); }
+.d-inv-no { width: 1.9em; flex: none; padding-top: 0.3em; font-family: var(--font-geist-mono), monospace; font-size: 0.7em; color: var(--muted); }
 
 /* contact */
-.d-contact { list-style: none; margin: 1.1em 0 0; padding: 0; max-width: 30em; border-top: 1px solid var(--rule); }
+.d-contact { list-style: none; margin: 0; padding: 0; max-width: 32em; border-top: 1px solid var(--rule); }
 .d-contact li { border-bottom: 1px solid var(--rule); }
-.d-contact-link { display: flex; align-items: center; gap: 0.9em; padding: 0.9em 0; transition: color 0.2s; }
+.d-contact-link { display: flex; align-items: center; gap: 0.9em; padding: 0.95em 0; transition: color 0.2s; }
+.d-contact-link span { overflow-wrap: anywhere; }
 .d-contact-link:hover { color: var(--accent); }
-.d-end {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0.8em 2em;
-  font-family: var(--font-geist-mono), monospace; font-size: 0.72em; color: var(--muted);
-}
+.d-end { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6em 1.6em; font-family: var(--font-geist-mono), monospace; font-size: 0.76em; color: var(--muted); line-height: 1.5; }
 .d-backtop { margin-left: auto; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 
-/* ==========================================================================================
-   WRITING PRIMITIVES
-   Every .write element gets --r (0 → 1). In cinematic mode it is computed from the page
-   progress --p and the element's own --s (start) and --k (1 / duration). In flow mode the
-   scroll loop sets --r directly. Without JavaScript, or in static mode, --r is simply 1.
-   ========================================================================================== */
+/* ---------------------------------------------------------------- reveal ------------------- */
+/* Every .write block gets --r (0 → 1) from its sheet's reveal progress --p and its own --s (start) and
+   --k (1 / duration). A calm fade with a very small rise, block by block. Once a sheet is fully
+   revealed ([data-done]) every transform is dropped, so resting text is crisp and costs nothing.
+   Without JavaScript, or in the plain document, --r is simply 1. */
 .write { --r: 1; }
 .js .write { --r: clamp(0, calc((var(--p, 0) - var(--s, 0)) * var(--k, 1)), 1); }
-[data-dm="static"] .write { --r: 1 !important; }
-
-/* words: ink settles into place */
-.write-words .w {
-  --wr: clamp(0, calc(var(--r) * 1.8 - var(--i, 0) * 0.8), 1);
-  display: inline-block; opacity: var(--wr);
-  transform: translate3d(0, calc((1 - var(--wr)) * 0.45em), 0);
-  color: color-mix(in srgb, var(--accent) calc((1 - var(--wr)) * 100%), currentColor);
-}
-
-/* line: masked wipe with a pen mark at the edge */
-.write-line { position: relative; display: block; width: fit-content; max-width: 100%; }
-.write-line > .ink {
-  display: inline-block;
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(var(--r) * 118% - 18%), transparent calc(var(--r) * 118%));
-  mask-image: linear-gradient(90deg, #000 calc(var(--r) * 118% - 18%), transparent calc(var(--r) * 118%));
-}
-.write-line::after {
-  content: ""; position: absolute; top: 0.1em; bottom: 0.1em; width: 2px; background: var(--accent);
-  left: calc(var(--r) * 100%);
-  opacity: calc(clamp(0, calc(var(--r) * 40), 1) * clamp(0, calc((1 - var(--r)) * 40), 1));
-}
-
-.write-block { opacity: var(--r); transform: translate3d(0, calc((1 - var(--r)) * 0.7em), 0); }
-.write-stamp {
-  opacity: clamp(0, calc(var(--r) * 3), 1);
-  transform: rotate(-1.5deg) scale(calc(1 + (1 - var(--r)) * 0.22)); transform-origin: left center;
-}
-.write-stagger > * {
-  --wr: clamp(0, calc(var(--r) * 2.2 - var(--i, 0) * 1.2), 1);
-  opacity: var(--wr); transform: translate3d(calc((1 - var(--wr)) * -0.6em), 0, 0);
-}
+:is([data-dm="static"], html:not(.js)) .write { --r: 1 !important; }
+.write-block { opacity: var(--r); transform: translate3d(0, calc((1 - var(--r)) * 0.4em), 0); }
+.write-stamp { opacity: clamp(0, calc(var(--r) * 3), 1); transform: rotate(-1.5deg) scale(calc(1 + (1 - var(--r)) * 0.18)); transform-origin: left center; }
+.write-stagger > * { --wr: clamp(0, calc(var(--r) * 2.2 - var(--i, 0) * 1.2), 1); opacity: var(--wr); transform: translate3d(calc((1 - var(--wr)) * -0.5em), 0, 0); }
 .write-rule { transform-origin: left; transform: scaleX(var(--r)); }
+.d-bullets > li::before { transform-origin: left; transform: scaleX(clamp(0, calc(var(--r) * 4), 1)); }
+[data-done="1"] .write, [data-measuring] .write { --r: 1; opacity: 1; transform: none; }
+[data-done="1"] .write-stamp, [data-measuring] .write-stamp { transform: rotate(-1.5deg); }
+[data-done="1"] .write-stagger > *, [data-measuring] .write-stagger > * { opacity: 1; transform: none; }
+[data-done="1"] .d-bullets > li::before, [data-measuring] .d-bullets > li::before { transform: none; }
+:is([data-dm="static"], html:not(.js)) .write, :is([data-dm="static"], html:not(.js)) .write-stagger > * { opacity: 1; transform: none; }
+:is([data-dm="static"], html:not(.js)) .write-stamp { transform: rotate(-1.5deg); }
 
 
 /* ==========================================================================================
-   CINEMATIC (desktop): one pinned stage; the folder turns, the sidebar arrives, the folder opens,
-   then the pages are written and turned. Everything inside .d-object is ONE physical object.
+   ANIMATED (spread + single): one pinned stage. The folder turns, opens, its pages are turned by
+   scrolling, then it closes and turns back. Everything inside .d-object is ONE physical object.
+   Both presentations share all of this; they differ only in geometry (--pw, --ph), in how the sheets are
+   paired up (see below) and in how far a sheet swings.
    ========================================================================================== */
-[data-dm="cinematic"] .d-track { height: calc(var(--total) * 100vh); }
-[data-dm="cinematic"] .d-stage { display: block; position: sticky; top: 0; height: 100vh; overflow: hidden; }
+:is([data-dm="spread"], [data-dm="single"]) .d-track { height: calc(var(--total) * 100vh); height: calc(var(--total) * 100svh); }
+:is([data-dm="spread"], [data-dm="single"]) .d-stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
 
 /* The object is the closed portrait folder, centred in the stage. Every state is a transform of it:
      rotateZ   landscape → portrait (a rigid quarter turn of the whole object)
      rotateX/Y a small lift-and-tilt while it turns, plus a gentle pointer tilt while it is closed
      scale     landscape is shown larger, settling to 1
-     translate keeps the visible folder centred between the sidebar and the right edge;
-               it moves right by half a panel as the lid opens so the open spread stays centred */
-[data-dm="cinematic"] .d-object {
-  display: block; position: absolute; left: 50%; top: 50%;
-  width: var(--pw); height: var(--ph);
+     translate (spread only) slides right by half a page as the lid opens so the open spread is centred */
+:is([data-dm="spread"], [data-dm="single"]) .d-object {
+  position: absolute; left: 50%; top: calc(50% + var(--dy)); width: var(--pw); height: var(--ph);
   margin: calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2);
   transform-style: preserve-3d;
   transform:
     perspective(5200px)
-    translate3d(calc(var(--side) * 0.5 * var(--sbe) + var(--pw) * 0.5 * var(--e)), calc(var(--arc) * -16px), 0)
+    translate3d(calc(var(--pw) * var(--shift) * var(--e)), calc(var(--arc) * -16px), 0)
     rotateX(calc(var(--arc) * 9deg + var(--ty) * clamp(0, calc(1 - var(--op) * 6), 1) * -1.1deg))
     rotateY(calc(var(--arc) * -7deg + var(--tx) * clamp(0, calc(1 - var(--op) * 6), 1) * 1.6deg))
     scale(var(--scale))
     rotateZ(var(--turn));
   will-change: transform;
+  /* the folder is presented as soon as the page paints: pure CSS, no script or timer involved */
+  animation: d-enter 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
+@keyframes d-enter { from { opacity: 0; translate: 0 26px; } }
 /* Fully open: a plain translation (crisp text, no 3D resampling). */
-[data-dm="cinematic"] .d-root[data-settled] .d-object {
-  transform: translate3d(calc(var(--side) * 0.5 + var(--pw) * 0.5), 0, 0);
+:is([data-dm="spread"], [data-dm="single"]) .d-root[data-settled="1"] .d-object {
+  transform: translate3d(calc(var(--pw) * var(--shift)), 0, 0);
 }
 
-/* sheets of paper standing in the folder, seen at its edge. Layered in depth, so they shift
-   against the cover as it tilts. */
-[data-dm="cinematic"] .d-object::before,
-[data-dm="cinematic"] .d-object::after {
+/* sheets of paper standing in the folder, seen at its edge */
+:is([data-dm="spread"], [data-dm="single"]) .d-object::before,
+:is([data-dm="spread"], [data-dm="single"]) .d-object::after {
   content: ""; position: absolute; inset: 0; border-radius: 3px; border: 1px solid var(--rule); background: var(--paper);
 }
-[data-dm="cinematic"] .d-object::before { transform: translate3d(11px, -8px, -5px); opacity: 0.6; }
-[data-dm="cinematic"] .d-object::after { transform: translate3d(6px, -4px, -2px); opacity: 0.9; }
+:is([data-dm="spread"], [data-dm="single"]) .d-object::before { transform: translate3d(11px, -8px, -5px); opacity: 0.6; }
+:is([data-dm="spread"], [data-dm="single"]) .d-object::after { transform: translate3d(6px, -4px, -2px); opacity: 0.9; }
 
-/* the folder's shadow on the desk: a soft contact shadow always, and a wider, deeper one that
-   appears only while the folder is lifted and turning (opacity only, so it costs nothing) */
-[data-dm="cinematic"] .d-shadow {
+/* the folder's shadow on the desk */
+:is([data-dm="spread"], [data-dm="single"]) .d-shadow {
   display: block; position: absolute; inset: 0; border-radius: 4px; pointer-events: none;
   transform: translate3d(0, 0, -12px);
   box-shadow: 0 0 34px 2px rgba(40, 28, 10, 0.22), 0 6px 14px -4px rgba(40, 28, 10, 0.34);
 }
-[data-dm="cinematic"] .d-shadow::after {
-  content: ""; position: absolute; inset: 0; border-radius: 4px;
-  box-shadow: 0 34px 70px -6px rgba(40, 28, 10, 0.4);
-  opacity: var(--arc);
+:is([data-dm="spread"], [data-dm="single"]) .d-shadow::after {
+  content: ""; position: absolute; inset: 0; border-radius: 4px; box-shadow: 0 34px 70px -6px rgba(40, 28, 10, 0.4); opacity: var(--arc);
 }
 
-[data-dm="cinematic"] .d-cover-wrap {
-  position: absolute; inset: 0; z-index: 5; display: block; height: auto; overflow: visible;
-  transform-style: preserve-3d; pointer-events: none;
+/* ---- the lid -------------------------------------------------------------------------------
+   Above the pages while it is closed or nearly closed, below them once it is open (data-lidtop flips at
+   the moment the lid is edge-on and invisible). It hinges on the spine with the same perspective as the
+   sheets, so the sheets that lie on it always sit exactly on it. */
+:is([data-dm="spread"], [data-dm="single"]) .d-cover-wrap {
+  position: absolute; inset: 0; z-index: var(--zl); padding: 0; pointer-events: none; transform: translateZ(var(--zlz));
 }
-[data-dm="cinematic"] .d-lid-holder {
-  position: absolute; inset: 0; width: auto; height: auto; transform: none; will-change: auto;
-  transition: none; opacity: 1; translate: none;
+:is([data-dm="spread"], [data-dm="single"]) .d-lid-holder {
+  position: absolute; inset: 0; width: auto; max-width: none; margin: 0;
+  perspective: var(--persp); perspective-origin: 0 50%;
 }
-[data-dm="cinematic"] .d-folder-base { display: none; }
-[data-dm="cinematic"] .d-spacer { display: none; }
+:is([data-dm="spread"], [data-dm="single"]) .d-lid { position: absolute; inset: 0; transform: translate3d(0, 0, 3px) rotateY(calc(var(--e) * -180deg)); will-change: transform; }
+:is([data-dm="spread"], [data-dm="single"]) .d-lid-face { position: absolute; inset: 0; }
+:is([data-dm="spread"], [data-dm="single"]) .d-cover {
+  position: absolute; left: 50%; top: 50%;
+  width: calc(var(--ph) * (1 - var(--a)) + var(--pw) * var(--a));
+  height: calc(var(--pw) * (1 - var(--a)) + var(--ph) * var(--a));
+  container-type: size;
+  transform: translate(-50%, -50%) rotate(calc(var(--turn) * -1)) scale(calc(1 - var(--arc) * 0.3));
+  opacity: calc(1 - var(--arc) * 0.35);
+}
+:is([data-dm="spread"], [data-dm="single"]) .d-print { position: absolute; inset: 0; padding: clamp(1.1rem, 4.6cqw, 3.2rem); }
+:is([data-dm="spread"], [data-dm="single"]) .d-cover-name { font-size: calc(9.6cqw + 8.8cqw * var(--af)); }
+:is([data-dm="spread"], [data-dm="single"]) .d-cover-role { font-size: max(0.72rem, calc(1.5cqw + 1.2cqw * var(--af))); }
+.d-cue-start, .d-cue-end { display: inline-flex; align-items: center; gap: 0.6rem; }
+.d-cue-end { display: none; }
+.d-root[data-end="1"] .d-cue-start { display: none; }
+.d-root[data-end="1"] .d-cue-end { display: inline-flex; }
 
-/* the back board with the sheets in it: the right-hand panel once the folder is open */
-[data-dm="cinematic"] .d-frame {
-  position: absolute; inset: 0; z-index: 1; margin: 0; padding: 14px; border-radius: 4px;
+/* ---- the back board with the sheets in it: the right-hand page of the open folder ---------- */
+:is([data-dm="spread"], [data-dm="single"]) .d-frame {
+  position: absolute; inset: 0; z-index: var(--zf); max-width: none; margin: 0; padding: var(--bd); border-radius: 4px;
+  transform: translateZ(var(--zfz));
   box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.08), inset -1px -1px 0 rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.55);
 }
-[data-dm="cinematic"] .d-frame-tab {
-  display: flex; align-items: center; position: absolute; right: clamp(1.4rem, 7%, 3.4rem); top: -1.7rem;
-  height: 1.7rem; padding: 0 1.6rem; background: var(--folder); color: var(--folder-mute);
+/* the physical tab: its own decorative layer above the folder edge, never inside a page */
+:is([data-dm="spread"], [data-dm="single"]) .d-frame-tab {
+  display: flex; align-items: center; position: absolute; top: -1.7rem; height: 1.7rem; padding: 0 1.6rem;
+  background: var(--folder); color: var(--folder-mute); opacity: var(--e); white-space: nowrap; pointer-events: none;
   font-family: var(--font-geist-mono), monospace; font-size: 0.64rem; letter-spacing: 0.18em; text-transform: uppercase;
-  clip-path: polygon(0 100%, 7% 0, 93% 0, 100% 100%); white-space: nowrap;
-  opacity: var(--e);
+  clip-path: polygon(0 100%, 7% 0, 93% 0, 100% 100%);
 }
-[data-dm="cinematic"] .d-pages {
+[data-dm="spread"] .d-frame-tab { right: clamp(1.4rem, 7%, 3.4rem); }
+[data-dm="single"] .d-frame-tab { left: clamp(1.2rem, 7%, 3rem); }
+
+:is([data-dm="spread"], [data-dm="single"]) .d-pages {
   display: block; position: relative; width: 100%; height: 100%;
-  perspective: 1800px; perspective-origin: 0 50%;
+  perspective: var(--persp); perspective-origin: calc(var(--bd) * -1) 50%;
 }
 /* the top sheet of the stack: blank paper, there before anything is written on it */
-[data-dm="cinematic"] .d-pages::before {
+:is([data-dm="spread"], [data-dm="single"]) .d-pages::before {
   content: ""; position: absolute; inset: 0; background: var(--paper); border: 1px solid var(--rule); border-radius: 2px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+:is([data-dm="spread"], [data-dm="single"]) .d-page { display: contents; }
+
+/* ---------------------------------------------------------------- the sheets (surfaces) -----
+   Every half-page is a sheet of paper in the same place. A sheet turns about the spine:
+       R / single sheet   rotateY(0 → -180deg)   (phone: 0 → -100deg, it swings out of sight)
+       L sheet (desktop)  the BACK of the leaf that turns: rotateY(180deg → 0), the mirror image about
+                          the spine, so it lands flat on the left exactly as the leaf's front leaves.
+   --te is the eased turn. [data-turn=rest] drops the transform so resting pages are flat and crisp. */
+:is([data-dm="spread"], [data-dm="single"]) .d-surface {
+  --te: calc(var(--t) * var(--t) * (3 - 2 * var(--t)));
+  --sh: calc(4 * var(--te) * (1 - var(--te)));        /* 0 → 1 → 0 while the sheet is mid-turn */
+  position: absolute; inset: 0; transform-origin: calc(var(--bd) * -1) 50%;
+  z-index: calc(40 - var(--n, 0));
+  -webkit-backface-visibility: hidden; backface-visibility: hidden;
+}
+:is([data-dm="spread"], [data-dm="single"]) .d-surface[data-active="false"] { visibility: hidden; pointer-events: none; }
+:is([data-dm="spread"], [data-dm="single"]) .d-surface[data-turn="moving"] { will-change: transform; }
+
+:is([data-dm="spread"], [data-dm="single"]) .d-face { position: absolute; inset: 0; container: page / size; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+:is([data-dm="spread"], [data-dm="single"]) .d-sheet {
+  position: absolute; inset: 0; border-radius: 2px;
+  font-size: calc(var(--fit, 1) * var(--fs)); overflow: hidden;
+}
+:is([data-dm="spread"], [data-dm="single"]) .d-body { flex: 1 1 0; overflow: hidden; }
+:is([data-dm="spread"], [data-dm="single"]) .d-sheet[data-overflow] .d-body { overflow-y: auto; overscroll-behavior: auto; }
+:is([data-dm="spread"], [data-dm="single"]) .d-portrait { flex: 1 1 0; }
+:is([data-dm="spread"], [data-dm="single"]) .d-portrait-image { flex: 1 1 0; height: 0; min-height: 0; aspect-ratio: auto; max-height: none; }
+
+/* light and shadow: the sheet darkens toward its free edge as it lifts, and the page it uncovers is
+   in shade until the sheet has moved away. Opacity only, so it is cheap. */
+:is([data-dm="spread"], [data-dm="single"]) .d-surface::after {
+  content: ""; position: absolute; inset: 0; border-radius: 2px; pointer-events: none;
+  -webkit-backface-visibility: hidden; backface-visibility: hidden;
+  background: linear-gradient(90deg, rgba(40, 28, 10, 0.04), rgba(40, 28, 10, 0.5));
+  opacity: min(1, calc(var(--sh) * 0.55 + (1 - var(--p, 0)) * 0.3));
+}
+[data-dm="spread"] .d-surface[data-side="l"]::after { background: linear-gradient(270deg, rgba(40, 28, 10, 0.04), rgba(40, 28, 10, 0.5)); }
+.d-surface[data-done="1"][data-turn="rest"]::after { display: none; }
+
+/* ---- spread (desktop): a book ------------------------------------------------------------- */
+[data-dm="spread"] .d-surface { transform: rotateY(calc(var(--te) * -180deg)); }
+[data-dm="spread"] .d-surface[data-side="l"] {
+  inset: 0 auto 0 calc(var(--pw) * -1); width: 100%; z-index: calc(50 + var(--n, 0));
+  transform-origin: calc(var(--pw) - var(--bd)) 50%;
+  transform: rotateY(calc((1 - var(--te) * (1 - var(--lc))) * 180deg));
+}
+[data-dm="spread"] .d-surface[data-turn="rest"] { transform: none; }
+.d-surface[data-side="l"] .d-rh-b, .d-surface[data-side="r"] .d-rh-a { display: none; }
+.d-surface[data-side="r"] .d-runhead { justify-content: flex-end; }
+[data-dm="spread"] .d-sheet {
+  --fs: clamp(0.84rem, 2.85cqw, 1.1rem);
+  --px: clamp(1.2rem, 5.6cqw, 2.6rem); --py: clamp(1rem, 3.6cqw, 1.7rem);
 }
 
-[data-dm="cinematic"] .d-page {
-  container: page / size;
-  --in: clamp(0, calc(var(--p, 0) / var(--ov, 0.2)), 1);
-  --out: clamp(0, calc((var(--p, 0) - 1 + var(--ov, 0.2)) / var(--ov, 0.2)), 1);
-  position: absolute; inset: 0; transform-origin: 0 50%;
-  opacity: calc(var(--in) * (1 - var(--out)));
-  /* a sheet settles onto the stack, and is lifted off like a page turning on its left edge */
-  transform:
-    translate3d(0, calc((1 - var(--in)) * 3vh - var(--out) * 1.6vh), 0)
-    rotateY(calc(var(--out) * -7deg));
-  will-change: transform, opacity;
+/* ---- single (phones, portrait tablets): one page, every half-page is its own sheet ---------- */
+[data-dm="single"] .d-surface { transform-style: preserve-3d; transform: rotateY(calc(var(--te) * -100deg)); }
+[data-dm="single"] .d-surface[data-turn="rest"] { transform: none; }
+/* the back of the sheet as it swings away: blank paper, never mirrored text */
+[data-dm="single"] .d-back {
+  display: block; position: absolute; inset: 0; border: 1px solid var(--rule); border-radius: 2px;
+  background: linear-gradient(90deg, #e6dfcf, #f1ecdf); transform: rotateY(180deg);
+  -webkit-backface-visibility: hidden; backface-visibility: hidden;
 }
-[data-dm="cinematic"] .d-page[data-last="true"] { --out: 0; }
-[data-dm="cinematic"] .d-page[data-active="false"] { visibility: hidden; pointer-events: none; }
+[data-dm="single"] .d-surface::after { transform: translateZ(1px); }
+[data-dm="single"] .d-rh-a { display: none; }
+[data-dm="single"] .d-surface[data-side="l"] .d-rh-b { display: inline; }
+[data-dm="single"] .d-surface[data-side="l"] .d-runhead { justify-content: flex-start; }
+[data-dm="single"] .d-sheet {
+  --fs: clamp(0.86rem, 4.3cqw, 1.06rem);
+  --px: clamp(0.95rem, 5.2cqw, 2rem); --py: clamp(0.8rem, 3.6cqw, 1.4rem);
+}
+[data-dm="single"] .d-runhead { font-size: 0.6rem; }
+[data-dm="single"] .d-runfoot { font-size: 0.66rem; }
+[data-dm="single"] .d-body { padding: 0.85rem 0; }
 
-/* The type scale follows the width of the sheet; --fit (set by Dossier.tsx) shrinks it only as far as
-   a dense page needs so that nothing is ever clipped. */
-[data-dm="cinematic"] .d-sheet {
-  height: 100%; overflow: hidden;
-  font-size: calc(var(--fit, 1) * clamp(0.7rem, 2.3cqw, 1.02rem));
-  padding: clamp(1rem, 4.4cqw, 2rem) clamp(1.1rem, 5.4cqw, 2.4rem) clamp(0.8rem, 3cqw, 1.4rem);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-[data-dm="cinematic"] .d-body { padding-top: clamp(0.8rem, 2.4cqw, 1.5rem); }
-[data-dm="cinematic"] .d-runfoot { margin-top: clamp(0.6rem, 2cqw, 1.2rem); }
-
-/* ==========================================================================================
-   STATIC (reduced motion, or "Plain view"): an ordinary document, nothing animates
-   ========================================================================================== */
-[data-dm="static"] .d-orn { display: none; }
-[data-dm="static"] .d-track { padding-left: var(--side); }
-[data-dm="static"] .d-cover-wrap { position: static; height: auto; display: block; overflow: visible; padding: 1rem 0.75rem 0.75rem; }
-[data-dm="static"] .d-lid-holder {
-  width: 100%; height: auto; max-width: 1100px; margin: 0 auto; transform: none; will-change: auto;
-}
-[data-dm="static"] .d-folder-base, [data-dm="static"] .d-lid-back, [data-dm="static"] .d-spacer { display: none; }
-[data-dm="static"] .d-lid { position: relative; transform: none; will-change: auto; }
-[data-dm="static"] .d-lid-face { position: relative; inset: auto; }
-[data-dm="static"] .d-lid-front::before, [data-dm="static"] .d-lid-front::after { display: none; }
-[data-dm="static"] .d-cover {
-  position: relative; left: auto; top: auto; width: auto; height: auto; container-type: normal;
-  transform: none; opacity: 1;
-}
-[data-dm="static"] .d-print { position: relative; inset: auto; padding: 2.2rem 1.6rem; }
-[data-dm="static"] .d-cover-name { font-size: clamp(2.8rem, 8vw, 5.4rem); }
-[data-dm="static"] .d-cover-role { font-size: clamp(0.8rem, 2.4vw, 1rem); }
-[data-dm="static"] .d-frame { margin: 0 auto; max-width: 1100px; border-radius: 10px; }
-
-/* Wider flow / static sheets get room to breathe */
-@media (min-width: 900px) {
-  [data-dm="flow"] .d-sheet, [data-dm="static"] .d-sheet { padding: 1.6rem 2rem 1.3rem; }
-  [data-dm="flow"] .d-pages, [data-dm="static"] .d-pages { max-width: 1100px; margin-inline: auto; width: 100%; }
-}
-@media (min-width: 640px) {
-  .d-sheet { padding: 1.4rem 1.6rem 1.2rem; }
-  .d-display { font-size: 3.6em; }
-}
-
-/* Phones: keep the cover header to one clean line */
-@media (max-width: 639px) {
-  .d-cover-top span:last-child { display: none; }
-}
+/* phones: the small cover has no room for the decorative contents strip (it is aria-hidden) */
+[data-dm="single"] .d-cover-contents { display: none; }

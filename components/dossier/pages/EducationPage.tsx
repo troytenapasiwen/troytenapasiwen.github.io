@@ -5,32 +5,42 @@ import { Stamp } from "../ui";
 import { education } from "@/data/education";
 
 export default function EducationPage() {
-  const q = sequence(0.1, 0.5, 2.6);
+  const l = sequence();
+  const r = sequence();
   return (
-    <Page id="education">
-      <div className="d-center-block">
-        <Write as="h2" mode="line" className="d-act" {...q(10)}>
-          <span className="d-act-no">04</span> Education
-        </Write>
-        {education.map((item) => (
-          <article key={item.school + item.degree} className="d-edu">
-            <Write as="p" mode="line" className="d-display d-display-md" {...q(item.school)}>
+    <Page
+      id="education"
+      left={
+        <div className="d-stack d-stack-center">
+          <Write as="h2" className="d-act" {...l()}>
+            <span className="d-act-no">04</span> Education
+          </Write>
+          {education.map((item) => (
+            <Write key={item.school} as="p" className="d-display d-display-md" {...l()}>
               {item.school}
             </Write>
-            <Rule className="d-rule-gap" {...q(30)} />
-            <Write as="h3" mode="words" className="d-title" {...q(item.degree)}>
-              {item.degree}
-            </Write>
-            <Write as="p" mode="words" className="d-p" {...q(item.specialization)}>
-              {item.specialization}
-            </Write>
-            <Write as="p" mode="words" className="d-meta" {...q(item.period)}>
-              {item.period}
-            </Write>
-            {item.honors && <Stamp q={q}>{item.honors}</Stamp>}
-          </article>
-        ))}
-      </div>
-    </Page>
+          ))}
+          <Rule className="d-rule-gap" {...l()} />
+        </div>
+      }
+      right={
+        <div className="d-stack d-stack-center">
+          {education.map((item) => (
+            <article key={item.school + item.degree} className="d-edu">
+              <Write as="h3" className="d-title" {...r()}>
+                {item.degree}
+              </Write>
+              <Write as="p" className="d-p" {...r()}>
+                {item.specialization}
+              </Write>
+              <Write as="p" className="d-meta" {...r()}>
+                {item.period}
+              </Write>
+              {item.honors && <Stamp q={r}>{item.honors}</Stamp>}
+            </article>
+          ))}
+        </div>
+      }
+    />
   );
 }

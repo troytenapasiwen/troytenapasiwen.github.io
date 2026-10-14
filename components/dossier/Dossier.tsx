@@ -1,61 +1,47 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
-import Sidebar from "./Sidebar";
-import {
-  ACTS,
-  FOLDER_SCREENS,
-  OPEN_SCREENS,
-  OVERLAP,
-  PAGES,
-  ROTATE_SCREENS,
-  SCROLL_SCREENS,
-  SIDEBAR_SCREENS,
-  TIMELINE,
-  TOTAL,
-  actById,
-  actJumpTarget,
-} from "./timeline";
+import type { ReactNode } from "react";
+import { FileText } from "lucide-react";
+import { MIN_SINGLE_HEIGHT, REDUCED_QUERY, SPREAD_QUERY, computeGeometry } from "./geometry";
+import type { Mode } from "./geometry";
+import { ACTS, PAGES, SURFACES, TIMELINES, actById, actJumpTarget } from "./timeline";
+import type { Span } from "./timeline";
 
 /**
  * The scroll engine.
  *
- * ONE scroll position is the only clock. It is turned into a physical state, in this order:
+ * ONE scroll position is the only clock. It is turned into a physical state by one pure function:
  *
- *   entrance   (time, once)  background only -> after ~1s the landscape folder is presented
- *   stage A    ra 0 -> 1     the SAME folder turns in space, landscape -> portrait
- *              sb 0 -> 1     the sidebar slides in (folder is portrait and still closed)
- *   stage B    op 0 -> 1     the portrait folder opens, right cover swinging to the left
- *   pages      --p per page  sheets are written and turned one after another
+ *   rotate   ra 0 -> 1     the SAME folder turns in space, landscape -> portrait
+ *   open     op 0 -> 1     the portrait folder opens, right cover swinging to the left
+ *   turn k   t  0 -> 1     leaf k turns about the spine; its back lands on the left (desktop) or it
+ *                          swings away (phone). Each sheet's reveal progress `--p` follows the turn
+ *                          that uncovers it.
+ *   read     (rest)        Contact stays still for a while so it can be read
+ *   close    op 1 -> 0     the lid swings back over the pages (the opening, reversed); the pages that
+ *                          lie on the lid travel with it
+ *   rotate   ra 1 -> 0     the folder turns back to its closed landscape state (the rotation, reversed)
  *
- * Nothing is "played": scrolling back up simply evaluates the same functions at smaller values, so
- * every stage reverses by itself. The visuals are CSS; this file only writes numbers.
+ * Nothing is "played": scrolling back simply evaluates the same function at a smaller value, so every
+ * stage reverses by itself and rapid or repeated scrolling can never leave the pages out of step.
+ * The visuals are CSS; this file only writes numbers (CSS custom properties), and only when they change.
  *
- * Three presentations share one set of markup. <html data-dm="..."> (set before first paint by the
- * inline script in layout.tsx) selects which CSS applies:
+ * <html data-dm="..."> (set before first paint by the inline script in layout.tsx) selects:
  *
- *   cinematic  desktop: the folder and the pages are pinned in one sticky stage and the open folder
- *              is a two-panel spread (lid on the left, sheets on the right).
- *   flow       phones / tablets / short windows: the same folder sequence plays pinned, then the
- *              sheets slide up over it as ordinary readable pages.
- *   static     reduced motion, or the "Plain view" button: a normal document, nothing animates.
+ *   spread  desktop: two pages visible at once, like an open book.
+ *   single  phones / portrait tablets: one page visible, every half-page turns as its own sheet.
+ *   static  reduced motion, the "Plain view" button, or a window too short for a page: a normal document.
  */
 
-type Mode = "cinematic" | "flow" | "static";
-
-const REDUCED = "(prefers-reduced-motion: reduce)";
-const CINEMATIC = "(min-width: 1024px) and (min-height: 620px)";
-
-/** Width / height of the portrait folder. Landscape is the same object turned a quarter turn. */
-const ASPECT = 0.72;
-const MIN_FIT = 0.6;
+const MIN_FIT = { spread: 0.72, single: 0.8 } as const;
 
 const clamp = (n: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, n));
-const even = (n: number) => Math.max(2, Math.round(n / 2) * 2);
+const ease = (x: number) => x * x * (3 - 2 * x);
+const ramp = (u: number, s: Span) => clamp((u - s.a) / (s.b - s.a));
 
 function detectMode(): Mode {
-  const reduced = window.matchMedia(REDUCED).matches;
+  const reduced = window.matchMedia(REDUCED_QUERY).matches;
   let plain = false;
   try {
     plain = localStorage.getItem("dossier-view") === "plain";
@@ -63,61 +49,23 @@ function detectMode(): Mode {
     // Storage can be blocked; fall through to the automatic choice.
   }
   if (reduced || plain) return "static";
-  return window.matchMedia(CINEMATIC).matches ? "cinematic" : "flow";
+  if (window.matchMedia(SPREAD_QUERY).matches) return "spread";
+  return window.innerHeight >= MIN_SINGLE_HEIGHT ? "single" : "static";
 }
 
-/**
- * Halfway through the turn the folder is at 45 degrees, where its bounding box is larger than in either
- * orientation. `dip` is how much the folder is pulled back (scale) at that moment so it never leaves the
- * screen: 0 when there is room, larger on short or small screens.
- */
-function dip(pw: number, ph: number, ls: number, vw: number, vh: number) {
-  const diag = (pw + ph) * Math.SQRT1_2;
-  const fits = Math.min((vh - 90) / diag, (vw * 0.92) / diag);
-  return Math.max(0, (ls + 1) / 2 - fits);
-}
-
-/**
- * Sizes of the physical folder in px. Computed from the viewport, so the folder always fits:
- *   pw x ph  portrait size of the closed folder
- *   side     width of the sidebar (a slim rail on small screens)
- *   ls       how much larger the folder is shown while landscape (it settles to 1 as it turns)
- */
-function geometry(mode: "cinematic" | "flow") {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  if (mode === "cinematic") {
-    const side = 216;
-    const availH = vh - 124;
-    const availW = vw - side - 56; // two panels once opened
-    const pw = even(Math.min(availW / 2, availH * ASPECT, 900 * ASPECT));
-    const ph = even(pw / ASPECT);
-    const ls = clamp(Math.min(1.4, (vw * 0.92) / ph, (vh - 100) / pw), 0.5, 1.4);
-    return { pw, ph, side, ls, dip: dip(pw, ph, ls, vw, vh) };
-  }
-  const side = vw >= 640 ? 52 : 44;
-  const pw = even(Math.max(160, Math.min(vw - side - 32, (vh - 88) * ASPECT, 560)));
-  const ph = even(pw / ASPECT);
-  const ls = clamp(Math.min(1.3, (vw - 32) / ph, (vh - 96) / pw), 0.5, 1.3);
-  return { pw, ph, side, ls, dip: dip(pw, ph, ls, vw, vh) };
-}
-
-export default function Dossier({
-  cover,
-  children,
-}: {
-  cover: ReactNode;
-  children: ReactNode;
-}) {
+export default function Dossier({ cover, children }: { cover: ReactNode; children: ReactNode }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const objectRef = useRef<HTMLDivElement>(null);
+  const probeRef = useRef<HTMLDivElement>(null);
 
-  const [mode, setMode] = useState<Mode>("flow");
+  const [mode, setMode] = useState<Mode>("single");
   const [reduced, setReduced] = useState(false);
-  const [activeAct, setActiveAct] = useState<string | null>(null);
+  const [short, setShort] = useState(false);
   const [activePage, setActivePage] = useState(-1);
-  const modeRef = useRef<Mode>("flow");
+  const modeRef = useRef<Mode>("single");
+  const unitRef = useRef(800);
+  const trackTopRef = useRef(0);
 
   // ---- choose the presentation, and keep it up to date -------------------------------------
   useEffect(() => {
@@ -126,30 +74,30 @@ export default function Dossier({
       modeRef.current = next;
       document.documentElement.setAttribute("data-dm", next);
       setMode(next);
-      setReduced(window.matchMedia(REDUCED).matches);
+      setReduced(window.matchMedia(REDUCED_QUERY).matches);
+      setShort(window.innerHeight < MIN_SINGLE_HEIGHT && !window.matchMedia(SPREAD_QUERY).matches);
     };
     apply();
-    const queries = [window.matchMedia(REDUCED), window.matchMedia(CINEMATIC)];
+    const queries = [window.matchMedia(REDUCED_QUERY), window.matchMedia(SPREAD_QUERY)];
     queries.forEach((mq) => mq.addEventListener("change", apply));
-    return () => queries.forEach((mq) => mq.removeEventListener("change", apply));
+    window.addEventListener("orientationchange", apply);
+    return () => {
+      queries.forEach((mq) => mq.removeEventListener("change", apply));
+      window.removeEventListener("orientationchange", apply);
+    };
   }, []);
 
   // ---- jump to a section ------------------------------------------------------------------
   const jump = useCallback((id: string) => {
     const m = modeRef.current;
-    if (m === "cinematic") {
-      const track = trackRef.current;
-      if (!track) return;
-      const u = id === "top" ? 0 : actJumpTarget(id);
-      const trackTop = track.getBoundingClientRect().top + window.scrollY;
+    if (m === "spread" || m === "single") {
+      const u = id === "top" ? 0 : actJumpTarget(id, m);
       // Instant on purpose: nobody should have to watch the animation to reach a section.
-      window.scrollTo({ top: trackTop + u * window.innerHeight, behavior: "instant" as ScrollBehavior });
+      window.scrollTo({ top: trackTopRef.current + u * unitRef.current, behavior: "instant" as ScrollBehavior });
     } else if (id === "top") {
-      window.scrollTo({ top: 0, behavior: m === "static" ? "auto" : "smooth" });
+      window.scrollTo({ top: 0, behavior: "auto" });
     } else {
-      document
-        .getElementById(id)
-        ?.scrollIntoView({ behavior: m === "static" ? "auto" : "smooth", block: "start" });
+      document.getElementById(id)?.scrollIntoView({ behavior: "auto", block: "start" });
     }
     try {
       history.replaceState(null, "", id === "top" ? window.location.pathname : `#${id}`);
@@ -175,176 +123,184 @@ export default function Dossier({
     return () => root.removeEventListener("click", onClick);
   }, [jump]);
 
-  // Following a #section link from elsewhere on the same page (browser back/forward, typed hashes).
+  // Following a #section link from elsewhere (browser back/forward, typed hashes), and arriving with a hash.
   useEffect(() => {
     const onHash = () => {
       const id = window.location.hash.slice(1);
       if (id && actById(id) && modeRef.current !== "static") jump(id);
     };
     window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, [jump]);
-
-  // Arriving with a hash (for example from a project page's "All projects" link).
-  useEffect(() => {
     const id = window.location.hash.slice(1);
-    if (!id || !actById(id) || modeRef.current === "static") return;
-    // The browser also tries to scroll to the hash on load; jump again once it has settled.
-    const frame = requestAnimationFrame(() => jump(id));
-    const later = window.setTimeout(() => jump(id), 250);
+    let frame = 0;
+    let later = 0;
+    if (id && actById(id)) {
+      // The browser also tries to scroll to the hash on load; jump again once it has settled.
+      frame = requestAnimationFrame(() => modeRef.current !== "static" && jump(id));
+      later = window.setTimeout(() => modeRef.current !== "static" && jump(id), 250);
+    }
     return () => {
+      window.removeEventListener("hashchange", onHash);
       cancelAnimationFrame(frame);
       window.clearTimeout(later);
     };
   }, [jump]);
 
-  // ---- entrance: empty background, then (after about a second) the folder is presented -------
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root || root.hasAttribute("data-in")) return;
-    const id = window.location.hash.slice(1);
-    const deepLink = !!id && !!actById(id);
-    if (mode === "static" || deepLink || window.scrollY > 8) {
-      // Plain view, a direct link to a section, or a restored scroll position: no staging.
-      root.setAttribute("data-in", "");
-      return;
-    }
-    const t = window.setTimeout(() => root.setAttribute("data-in", ""), 1000);
-    return () => window.clearTimeout(t);
-  }, [mode]);
-
   // ---- the scroll loop ---------------------------------------------------------------------
   useEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
+    if (!root || mode === "static") return;
+    const layout = mode;
+    const tl = TIMELINES[layout];
+    const last = PAGES.length - 1;
 
-    let raf = 0;
     const applied = new WeakMap<Element, Record<string, string>>();
     const setVar = (el: HTMLElement, name: string, value: string) => {
       let rec = applied.get(el);
-      if (!rec) {
-        rec = {};
-        applied.set(el, rec);
-      }
+      if (!rec) applied.set(el, (rec = {}));
       if (rec[name] === value) return;
       rec[name] = value;
       el.style.setProperty(name, value);
     };
-
-    // Elements that read the physical state (folder, lid, lettering, sidebar ...). They get the three
-    // scroll numbers directly, so the (large) page text is never restyled while the folder moves.
-    const drivers = Array.from(root.querySelectorAll<HTMLElement>("[data-drive]"));
-    const sidebar = root.querySelector<HTMLElement>(".d-sidebar");
-
-    const applyGeometry = () => {
-      if (mode === "static") return;
-      const g = geometry(mode);
-      root.style.setProperty("--pw", `${g.pw}px`);
-      root.style.setProperty("--ph", `${g.ph}px`);
-      root.style.setProperty("--side", `${g.side}px`);
-      root.style.setProperty("--ls", g.ls.toFixed(4));
-      root.style.setProperty("--dip", g.dip.toFixed(4));
+    const setAttr = (el: HTMLElement, name: string, value: string) => {
+      if (el.getAttribute(name) !== value) el.setAttribute(name, value);
     };
 
-    /** Scroll (in screens) -> the physical state. The ONLY place the stages are defined. */
-    const drive = (u: number) => {
-      const ra = clamp(u / ROTATE_SCREENS); // 0 landscape .. 1 portrait
-      const sb = clamp((u - ROTATE_SCREENS) / SIDEBAR_SCREENS); // sidebar
-      const op = clamp((u - ROTATE_SCREENS - SIDEBAR_SCREENS) / OPEN_SCREENS); // folder opening
+    const drivers = Array.from(root.querySelectorAll<HTMLElement>("[data-drive]"));
+    const surfaces = Array.from(root.querySelectorAll<HTMLElement>("[data-surface]")).sort(
+      (a, b) => Number(a.dataset.surface) - Number(b.dataset.surface),
+    );
+    const sheets = surfaces.map((el) => el.querySelector<HTMLElement>(".d-sheet")!);
+
+    // ---- fit: a sheet never clips or overlaps its text --------------------------------------
+    // Each half-page is measured in its real layout. If its body is taller than the room it has between
+    // header and footer, the type scale (--fit) shrinks just enough, never below MIN_FIT. If it still
+    // does not fit (tiny windows) the body becomes scrollable, so nothing is ever hidden.
+    let fitTimer = 0;
+    const runFit = () => {
+      root.setAttribute("data-measuring", "");
+      sheets.forEach((sheet) => {
+        const body = sheet.querySelector<HTMLElement>(".d-body");
+        if (!body) return;
+        let f = 1;
+        sheet.style.setProperty("--fit", "1");
+        sheet.removeAttribute("data-overflow");
+        for (let i = 0; i < 5; i++) {
+          const over = body.scrollHeight - body.clientHeight;
+          if (over <= 1) break;
+          f = Math.max(MIN_FIT[layout], f * (body.clientHeight / body.scrollHeight) * 0.985);
+          sheet.style.setProperty("--fit", f.toFixed(3));
+          if (f <= MIN_FIT[layout]) break;
+        }
+        if (body.scrollHeight - body.clientHeight > 1) sheet.setAttribute("data-overflow", "");
+      });
+      root.removeAttribute("data-measuring");
+    };
+    const fitLater = () => {
+      window.clearTimeout(fitTimer);
+      fitTimer = window.setTimeout(runFit, 140);
+    };
+
+    // ---- measurements: cached, and only redone on resize / orientation change -----------------
+    let lastKey = "";
+    const measure = (force = false) => {
+      const probe = probeRef.current;
+      const vw = window.innerWidth;
+      // 100svh: the viewport with the browser toolbars showing. It does not change while the address bar
+      // slides away, so the folder never resizes and the scroll progress never jumps mid-scroll.
+      const vh = probe?.offsetHeight || window.innerHeight;
+      const cs = probe ? getComputedStyle(probe) : null;
+      const safeTop = cs ? parseFloat(cs.paddingTop) || 0 : 0;
+      const safeBottom = cs ? parseFloat(cs.paddingBottom) || 0 : 0;
+      const key = `${vw}x${vh}x${safeTop}x${safeBottom}`;
+      if (!force && key === lastKey) return false;
+      lastKey = key;
+      const g = computeGeometry(layout, vw, vh, safeTop, safeBottom);
+      root.style.setProperty("--pw", `${g.pw}px`);
+      root.style.setProperty("--ph", `${g.ph}px`);
+      root.style.setProperty("--ls", g.ls.toFixed(4));
+      root.style.setProperty("--dip", g.dip.toFixed(4));
+      root.style.setProperty("--dy", `${g.dy}px`);
+      root.style.setProperty("--total", tl.total.toFixed(3));
+      unitRef.current = vh;
+      trackTopRef.current = (trackRef.current?.getBoundingClientRect().top ?? 0) + window.scrollY;
+      return true;
+    };
+
+    // ---- scroll -> physical state ------------------------------------------------------------
+    let lastU = -1;
+    let lastPage = -2;
+    const update = () => {
+      const u = clamp((window.scrollY - trackTopRef.current) / unitRef.current, 0, tl.scroll);
+      if (u === lastU) return;
+      lastU = u;
+
+      // folder: rotation and lid. Closing and un-rotating are the same ramps, subtracted.
+      const ra = ramp(u, tl.rotateIn) - ramp(u, tl.rotateOut);
+      const op = ramp(u, tl.open) - ramp(u, tl.close);
+      const e = ease(op);
       const sRa = ra.toFixed(4);
-      const sSb = sb.toFixed(4);
       const sOp = op.toFixed(4);
       drivers.forEach((el) => {
         setVar(el, "--ra", sRa);
-        setVar(el, "--sb", sSb);
         setVar(el, "--op", sOp);
       });
-      if (sidebar) sidebar.dataset.on = sb > 0.01 ? "1" : "0";
+      setAttr(root, "data-lidtop", e < 0.5 ? "1" : "0");
+      setAttr(root, "data-settled", op >= 0.999 ? "1" : "0");
+      setAttr(root, "data-end", u >= tl.scroll - 0.02 ? "1" : "0");
 
-      const stage =
-        u <= 0.001 ? "landscape" : ra < 1 ? "turning" : op <= 0 ? "portrait" : op < 1 ? "opening" : "open";
-      if (root.dataset.stage !== stage) root.dataset.stage = stage;
-      if (op >= 0.999) root.setAttribute("data-settled", "");
-      else root.removeAttribute("data-settled");
-      return { ra, sb, op };
-    };
+      // leaves
+      const t = tl.turns.map((span) => ramp(u, span));
+      const leaf = (k: number) => (k >= 0 && k < t.length ? t[k] : 0);
+      const closed = op <= 0.001;
 
-    // -- cinematic --
-    const pages = Array.from(root.querySelectorAll<HTMLElement>("[data-page]"));
-    let lastPage = -2;
-    let lastAct: string | null | undefined;
+      surfaces.forEach((el, s) => {
+        const page = s >> 1;
+        const left = (s & 1) === 0;
+        let own: number; // this surface's own turn / landing progress
+        let v: number; // reveal progress: how much of it has been uncovered
+        let visible: boolean;
+        let rest: boolean;
+        let lc = 0; // how far the lid has closed over a page that lies on it
 
-    const updateCinematic = () => {
-      const track = trackRef.current;
-      if (!track) return;
-      const vh = window.innerHeight;
-      const u = clamp(-track.getBoundingClientRect().top / vh, 0, SCROLL_SCREENS);
-      const { sb } = drive(u);
-      if (sidebar) setVar(sidebar, "--gp", (u / SCROLL_SCREENS).toFixed(4));
+        if (layout === "spread") {
+          if (left) {
+            own = page === 0 ? op : leaf(page - 1);
+            v = own;
+            visible = !closed && v > 0 && (leaf(page) < 1 || page === last);
+            lc = page === 0 ? 0 : 1 - e;
+            rest = own >= 1 && lc <= 0;
+          } else {
+            own = leaf(page);
+            v = page === 0 ? op : leaf(page - 1);
+            visible = !closed && v > 0 && (own < 1 || page === last);
+            rest = own <= 0;
+          }
+        } else {
+          own = leaf(s);
+          v = s === 0 ? op : leaf(s - 1);
+          visible = !closed && v > 0 && (own < 1 || s === SURFACES - 1);
+          rest = own <= 0;
+        }
 
-      let current = -1;
-      TIMELINE.forEach((p) => {
-        const el = pages[p.index];
-        if (!el) return;
-        const t = (u - p.a) / p.w;
-        const on = t > 0 && (t < 1 || p.last);
-        const value = t <= 0 ? 0 : t >= 1 ? 1 : t;
-        setVar(el, "--p", value.toFixed(4));
-        const flag = on ? "true" : "false";
-        if (el.dataset.active !== flag) el.dataset.active = flag;
-        if (u >= p.a + OVERLAP / 2) current = p.index;
+        setVar(el, "--t", own.toFixed(4));
+        if (layout === "spread" && left) setVar(el, "--lc", lc.toFixed(4));
+        setVar(el, "--p", v.toFixed(4));
+        setAttr(el, "data-active", visible ? "true" : "false");
+        setAttr(el, "data-turn", rest ? "rest" : "moving");
+        setAttr(el, "data-done", v >= 1 ? "1" : "0");
       });
 
+      // which page is on show (for the tab)
+      const turned = t.filter((x) => x >= 0.5).length;
+      const sheet = layout === "spread" ? turned : turned >> 1;
+      const current = e < 0.5 ? -1 : Math.min(sheet, last);
       if (current !== lastPage) {
         lastPage = current;
         setActivePage(current);
       }
-      // Before the first page, the sidebar is visible and the dossier is still closed: Introduction.
-      const act = current >= 0 ? TIMELINE[current].act : sb > 0.5 ? ACTS[0].id : null;
-      if (act !== lastAct) {
-        lastAct = act;
-        setActiveAct(act);
-      }
     };
 
-    // -- flow / static --
-    const pending = new Set(Array.from(root.querySelectorAll<HTMLElement>("[data-write]")));
-    const anchors = ACTS.map((a) => document.getElementById(a.id));
-
-    const updateFlow = () => {
-      const vh = window.innerHeight;
-      const doc = document.documentElement;
-      const y = window.scrollY;
-      const track = trackRef.current;
-      let u = 0;
-
-      if (mode === "flow" && track) {
-        u = Math.max(0, -track.getBoundingClientRect().top / vh);
-        drive(u);
-        // Writing is tied to how far each element has risen into the viewport, and it never un-writes.
-        pending.forEach((el) => {
-          const top = el.getBoundingClientRect().top;
-          const r = clamp((vh * 0.94 - top) / (vh * 0.3));
-          if (r > 0) el.style.setProperty("--r", r.toFixed(3));
-          if (r >= 1) pending.delete(el);
-        });
-      }
-      if (sidebar) setVar(sidebar, "--gp", clamp(y / Math.max(doc.scrollHeight - vh, 1)).toFixed(4));
-
-      let act: string | null = null;
-      anchors.forEach((el, i) => {
-        if (el && el.getBoundingClientRect().top <= vh * 0.35) act = ACTS[i].id;
-      });
-      if (!act && mode === "flow" && u >= ROTATE_SCREENS + SIDEBAR_SCREENS * 0.5) act = ACTS[0].id;
-      if (act !== lastAct) {
-        lastAct = act;
-        setActiveAct(act);
-      }
-    };
-
-    if (mode === "static" && sidebar) sidebar.dataset.on = "1";
-
-    const update = mode === "cinematic" ? updateCinematic : updateFlow;
+    let raf = 0;
     const schedule = () => {
       if (!raf) {
         raf = requestAnimationFrame(() => {
@@ -354,14 +310,20 @@ export default function Dossier({
       }
     };
     const onResize = () => {
-      applyGeometry();
+      if (measure()) {
+        lastU = -1;
+        runFit();
+      }
       schedule();
     };
 
-    applyGeometry();
+    measure(true);
+    runFit();
+    document.fonts?.ready.then(runFit);
     update();
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", onResize);
+    window.addEventListener("resize", fitLater);
 
     // Gentle pointer tilt while the folder is still closed (desktop with a mouse only).
     const obj = objectRef.current;
@@ -385,66 +347,30 @@ export default function Dossier({
       gy = (e.clientY / window.innerHeight - 0.5) * 2;
       if (!tiltRaf) tiltRaf = requestAnimationFrame(tick);
     };
-    if (mode === "cinematic" && fine) window.addEventListener("pointermove", onMove, { passive: true });
+    if (layout === "spread" && fine) window.addEventListener("pointermove", onMove, { passive: true });
 
     return () => {
       cancelAnimationFrame(raf);
       cancelAnimationFrame(tiltRaf);
+      window.clearTimeout(fitTimer);
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", fitLater);
       window.removeEventListener("pointermove", onMove);
       // Hand everything back to CSS: remove whatever the loop wrote.
-      ["--pw", "--ph", "--side", "--ls", "--dip"].forEach((n) => root.style.removeProperty(n));
-      drivers.forEach((el) =>
-        ["--ra", "--sb", "--op", "--tx", "--ty", "--gp"].forEach((n) => el.style.removeProperty(n)),
-      );
-      root.removeAttribute("data-stage");
-      root.removeAttribute("data-settled");
-      root.querySelectorAll<HTMLElement>("[data-page]").forEach((el) => {
-        el.style.removeProperty("--p");
-        el.dataset.active = "false";
+      ["--pw", "--ph", "--ls", "--dip", "--dy", "--total"].forEach((n) => root.style.removeProperty(n));
+      drivers.forEach((el) => ["--ra", "--op", "--tx", "--ty"].forEach((n) => el.style.removeProperty(n)));
+      ["data-lidtop", "data-settled", "data-end", "data-measuring"].forEach((n) => root.removeAttribute(n));
+      surfaces.forEach((el) => {
+        ["--t", "--lc", "--p"].forEach((n) => el.style.removeProperty(n));
+        el.setAttribute("data-active", "false");
+        el.removeAttribute("data-turn");
+        el.removeAttribute("data-done");
       });
-      root.querySelectorAll<HTMLElement>("[data-write]").forEach((el) => el.style.removeProperty("--r"));
-    };
-  }, [mode]);
-
-  // ---- fit: a sheet never clips its text --------------------------------------------------
-  // The open folder's right panel is portrait, so dense pages get a slightly smaller type scale
-  // (--fit, never below MIN_FIT). Measured from the real layout, so it adapts to any window size.
-  useEffect(() => {
-    if (mode !== "cinematic") return;
-    const root = rootRef.current;
-    if (!root) return;
-    const sheets = Array.from(root.querySelectorAll<HTMLElement>("[data-page]"));
-    let timer = 0;
-
-    const run = () => {
-      sheets.forEach((page) => {
-        const sheet = page.querySelector<HTMLElement>(".d-sheet");
-        if (!sheet) return;
-        let f = 1;
-        page.style.setProperty("--fit", "1");
-        for (let i = 0; i < 4; i++) {
-          // The tolerance covers the small "ink settling" offsets of text that is not yet written.
-          if (sheet.scrollHeight - sheet.clientHeight <= 14) break;
-          f = Math.max(MIN_FIT, f * (sheet.clientHeight / sheet.scrollHeight) * 0.98);
-          page.style.setProperty("--fit", f.toFixed(3));
-          if (f <= MIN_FIT) break;
-        }
+      sheets.forEach((sheet) => {
+        sheet.style.removeProperty("--fit");
+        sheet.removeAttribute("data-overflow");
       });
-    };
-    const later = () => {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(run, 140);
-    };
-
-    run();
-    document.fonts?.ready.then(run);
-    window.addEventListener("resize", later);
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("resize", later);
-      sheets.forEach((page) => page.style.removeProperty("--fit"));
     };
   }, [mode]);
 
@@ -462,42 +388,36 @@ export default function Dossier({
     window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
 
-  const page = activePage >= 0 ? TIMELINE[activePage] : null;
+  const page = activePage >= 0 ? PAGES[activePage] : null;
   const act = page ? ACTS.find((a) => a.id === page.act) : null;
   const tab = act
-    ? `${act.no} ${act.title} · ${String(page!.index + 1).padStart(2, "0")}/${String(PAGES.length).padStart(2, "0")}`
+    ? `${act.no} ${act.title} · ${String(activePage + 1).padStart(2, "0")}/${String(PAGES.length).padStart(2, "0")}`
     : "Portfolio";
-  const folio = page
-    ? `${String(page.index + 1).padStart(2, "0")} / ${String(PAGES.length).padStart(2, "0")}`
-    : "00 / " + String(PAGES.length).padStart(2, "0");
+  const plain = mode === "static";
 
   return (
     <div className="d-root" ref={rootRef}>
-      <Sidebar
-        active={activeAct}
-        onJump={jump}
-        plain={mode === "static"}
-        canToggle={!reduced}
-        onTogglePlain={togglePlain}
-        folio={folio}
-      />
+      {/* Measures the small viewport (100svh) and the device safe areas; invisible. */}
+      <div className="d-probe" ref={probeRef} aria-hidden="true" />
+      {!reduced && !short && (
+        <button
+          type="button"
+          className="d-toggle"
+          aria-pressed={plain}
+          onClick={togglePlain}
+          title={plain ? "Switch to the animated dossier" : "Show everything as a plain document"}
+        >
+          <FileText className="size-4" aria-hidden="true" />
+          <span className="d-toggle-text">{plain ? "Animated view" : "Plain view"}</span>
+        </button>
+      )}
       <main id="main" className="dossier">
         <div id="top" />
-        <div
-          className="d-track"
-          ref={trackRef}
-          style={
-            {
-              "--total": TOTAL.toFixed(3),
-              "--intro": FOLDER_SCREENS.toFixed(3),
-            } as CSSProperties
-          }
-        >
+        <div className="d-track" ref={trackRef}>
           <div className="d-stage">
             <div className="d-object" ref={objectRef} data-drive>
               <span className="d-shadow" data-drive aria-hidden="true" />
               <div className="d-cover-wrap">{cover}</div>
-              <div className="d-spacer" aria-hidden="true" />
               <div className="d-frame">
                 <span className="d-frame-tab" data-drive aria-hidden="true">
                   {tab}

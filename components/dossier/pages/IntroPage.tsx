@@ -5,39 +5,42 @@ import { sequence } from "../sequence";
 import { site } from "@/data/site";
 
 export default function IntroPage() {
-  const q = sequence(0.07);
+  const l = sequence();
+  const r = sequence();
   return (
-    <Page id="intro">
-      <div className="d-cols d-cols-intro">
-        <div className="d-col d-col-center">
-          <Write as="h2" mode="line" className="d-act" {...q(12)}>
+    <Page
+      id="intro"
+      left={
+        <div className="d-stack d-stack-center">
+          <Write as="h2" className="d-act" {...l()}>
             <span className="d-act-no">01</span> Introduction
           </Write>
-          <Write as="p" mode="line" className="d-display" {...q(12)}>
+          <Write as="p" className="d-display" {...l()}>
             {site.name}
           </Write>
-          <Write as="p" mode="words" className="d-role" {...q(site.headline)}>
+          <Write as="p" className="d-role" {...l()}>
             {site.headline}
           </Write>
-          <Rule className="d-rule-gap" {...q(30)} />
-          <Write as="p" mode="words" className="d-meta" {...q(site.subtitle)}>
+          <Rule className="d-rule-gap" {...l()} />
+          <Write as="p" className="d-meta" {...l()}>
             {site.subtitle}
           </Write>
         </div>
-        <div className="d-col d-col-center d-col-about">
-          <figure className="d-portrait">
-            <Image
-              src="/troy.jpg"
-              alt="Portrait of Troy Pasiwen"
-              width={900}
-              height={1100}
-              priority
-              className="d-portrait-image"
-            />
-            <figcaption className="d-portrait-caption">Troy Pasiwen</figcaption>
-          </figure>
-        </div>
-      </div>
-    </Page>
+      }
+      right={
+        <Write as="figure" className="d-portrait" {...r()}>
+          <Image
+            src="/troy.jpg"
+            alt="Portrait of Troy Pasiwen"
+            width={900}
+            height={1100}
+            loading="eager"
+            fetchPriority="low"
+            className="d-portrait-image"
+          />
+          <figcaption className="d-portrait-caption">Troy Pasiwen</figcaption>
+        </Write>
+      }
+    />
   );
 }
