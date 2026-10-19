@@ -1,6 +1,6 @@
 # Troy Pasiwen: Portfolio
 
-Personal portfolio for Troy Pasiwen, Software Developer | Web, Mobile & AI.
+My Personal Portfolio, Software Developer | Web, Mobile & AI.
 
 Live site: https://troytenapasiwen.github.io
 GitHub: https://github.com/troytenapasiwen
