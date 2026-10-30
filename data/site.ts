@@ -4,6 +4,15 @@ export const site = {
   focus: "Web, Mobile & AI",
   headline: "Software Developer | Web, Mobile & AI",
   subtitle: "BS Information Technology, National University – Manila",
+  /** The one-line positioning statement used on the introduction page. Restates the description below. */
+  statement:
+    "Recent BS Information Technology graduate with hands-on experience in web and mobile development, software testing, and business applications.",
+  portrait: {
+    src: "/images/Profile.JPG",
+    alt: "Portrait of Troy Pasiwen in a dark suit and red tie, against a dark blue backdrop.",
+    width: 1280,
+    height: 1280,
+  },
   description:
     "Portfolio of Troy Pasiwen, a recent BS Information Technology graduate with hands-on experience in web and mobile development, software testing, and business applications.",
   url: "https://troytenapasiwen.github.io",

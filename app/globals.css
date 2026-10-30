@@ -2,25 +2,33 @@
 
 /* ------------------------------------------------------------------------------------------
    Colour tokens. Change these values and the whole site updates. (Light appearance only.)
-   --desk   the surface the dossier sits on
-   --folder the folder itself (cover, back panel)
-   --paper  the sheets written inside the folder
+
+   The identity is black, ivory and one restrained orange:
+   --folder      the black board of the folder (cover, back board, inside of the cover)
+   --paper       ivory sheets inside the folder          --desk   the warm table the folder sits on
+   --vermilion   the folder's orange: tabs, rules, small blocks (never small text on ivory)
+   --accent      a deeper orange for text on ivory (5.4:1). On black pages the bright orange is used.
    ------------------------------------------------------------------------------------------ */
 :root {
-  --bg: #faf8f4;
-  --fg: #1f1d1a;      /* ink */
-  --muted: #625d55;   /* secondary text */
-  --line: #e3ddd1;
-  --accent: #0f766e;  /* deep teal, the single accent */
+  --bg: #e6dfd0;
+  --fg: #181614;       /* near-black ink */
+  --muted: #5f5a52;    /* warm grey: 6.4:1 on paper */
+  --line: #d9d1c1;
+  --accent: #b8381a;   /* orange for text on ivory: 5.4:1 */
+  --vermilion: #ff593d;
+  --ivory: #fbf7ee;
 
-  --desk: #e5e0d5;
-  --paper: #faf7f0;
-  --rule: #d6cfbf;    /* hairlines on paper */
-  --folder: #1d1e21;
-  --folder-2: #2a2b30;
-  --folder-ink: #efe9dc;
-  --folder-mute: #a9a498;
-  --accent-dk: #5fcfc2; /* accent on the dark folder */
+  --desk: #e6dfd0;
+  --paper: #fbf7ee;
+  --paper-2: #f1ebdd;
+  --rule: #d9d1c1;
+  --folder: #0f0e0d;
+  --folder-2: #1c1a18;      /* the inside of the cover */
+  --folder-dk: #050505;     /* edge / thickness plane */
+  --folder-ink: #f6f1e7;
+  --folder-mute: rgba(246, 241, 231, 0.74);
+  --char: #26231f;          /* charcoal for secondary dark surfaces */
+  --ink-warm: 32, 24, 12;   /* neutral warm shadow colour (rgb) */
 }
 
 /* Expose the tokens to Tailwind: bg-paper, border-rule, text-muted, text-accent ... */
@@ -30,27 +38,34 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-vermilion: var(--vermilion);
   --color-desk: var(--desk);
   --color-paper: var(--paper);
   --color-rule: var(--rule);
+  --color-folder: var(--folder);
 
-  --font-sans: var(--font-geist-sans);
-  --font-serif: var(--font-newsreader);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-dm-sans);
+  --font-serif: var(--font-archivo);   /* the display face; kept under the old utility name */
+  --font-reading: var(--font-newsreader);
+  --font-mono: var(--font-plex-mono);
 }
 
 body {
   background: var(--desk);
   color: var(--fg);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 /* Visible keyboard focus everywhere */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 3px solid var(--accent);
   outline-offset: 3px;
   border-radius: 2px;
+}
+/* On black surfaces the focus ring is ivory, with a thin dark keyline so it reads on any colour. */
+.d-lid-front :focus-visible, .d-sheet[data-tone] :focus-visible, .d-dock :focus-visible, .pe-mast :focus-visible, .pe-foot :focus-visible, .d-cue:focus-visible {
+  outline-color: var(--folder-ink); box-shadow: 0 0 0 5px rgba(15, 14, 13, 0.55);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -62,14 +77,110 @@ body {
 }
 
 /* ==========================================================================================
+   THE DESK (backdrop). Fixed, behind everything, never interactive. See components/ui/Backdrop.tsx.
+   Quiet by design: a few elements drift by transform only, and not at all on phones, with reduced
+   motion, or in the plain edition.
+   ========================================================================================== */
+.bd { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.bd > * { position: absolute; }
+.bd-glow {
+  inset: 0;
+  background: radial-gradient(ellipse 52% 62% at 50% 47%, rgba(255, 252, 244, 0.95), rgba(255, 252, 244, 0) 72%);
+}
+/* a technical grid: fine lines every 56px, stronger every 224px, calmer behind the folder */
+.bd-grid {
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(var(--ink-warm), 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(var(--ink-warm), 0.1) 1px, transparent 1px),
+    linear-gradient(to right, rgba(var(--ink-warm), 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(var(--ink-warm), 0.055) 1px, transparent 1px);
+  background-size: 224px 224px, 224px 224px, 56px 56px, 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 48%, rgba(0, 0, 0, 0.3), #000 80%);
+  mask-image: radial-gradient(ellipse 60% 70% at 50% 48%, rgba(0, 0, 0, 0.3), #000 80%);
+}
+/* a ruler down the left edge, with one orange tick */
+.bd-ruler {
+  left: clamp(8px, 1.6vw, 26px); top: 0; bottom: 0; width: 16px;
+  background:
+    repeating-linear-gradient(to bottom, rgba(var(--ink-warm), 0.38) 0 1px, transparent 1px 100px) left top / 16px 100% no-repeat,
+    repeating-linear-gradient(to bottom, rgba(var(--ink-warm), 0.26) 0 1px, transparent 1px 20px) left top / 8px 100% no-repeat;
+}
+.bd-ruler::after { content: ""; position: absolute; left: 0; top: 36%; width: 24px; height: 2px; background: var(--vermilion); }
+/* loose sheets lying under the folder */
+.bd-sheet {
+  background: rgba(253, 250, 242, 0.62); border: 1px solid rgba(var(--ink-warm), 0.14);
+  box-shadow: 0 34px 60px -44px rgba(var(--ink-warm), 0.5); padding: 7% 8%; display: flex; flex-direction: column; gap: 1.1em;
+  will-change: transform;
+}
+.bd-sheet i { display: block; height: 2px; background: rgba(var(--ink-warm), 0.12); }
+.bd-sheet i:nth-child(1) { width: 38%; height: 5px; background: rgba(var(--ink-warm), 0.2); }
+.bd-sheet i:nth-child(2) { width: 88%; } .bd-sheet i:nth-child(3) { width: 74%; }
+.bd-sheet i:nth-child(4) { width: 82%; } .bd-sheet i:nth-child(5) { width: 46%; }
+.bd-sheet-a { left: 5vw; top: 16vh; width: 31vw; height: 60vh; transform: rotate(-3.4deg); animation: bd-a 52s ease-in-out infinite alternate; }
+.bd-sheet-b { right: 4vw; top: 11vh; width: 28vw; height: 68vh; transform: rotate(2.6deg); animation: bd-b 61s ease-in-out infinite alternate; }
+@keyframes bd-a { to { transform: translate3d(14px, -10px, 0) rotate(-2.8deg); } }
+@keyframes bd-b { to { transform: translate3d(-12px, 12px, 0) rotate(3.1deg); } }
+/* a strip of empty contact-sheet frames, one marked in orange */
+.bd-strip {
+  left: 0; right: 0; top: clamp(8px, 2.6vh, 28px); height: 46px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+}
+.bd-strip-track { display: flex; gap: 10px; width: max-content; animation: bd-strip 170s linear infinite; will-change: transform; }
+.bd-strip-track span {
+  flex: none; width: 66px; height: 42px; padding: 3px 5px; border: 1px solid rgba(var(--ink-warm), 0.2);
+  font: 500 9px/1 var(--font-plex-mono), ui-monospace, monospace; color: rgba(var(--ink-warm), 0.55);
+}
+.bd-strip-track span[data-hot="1"] { border-color: var(--vermilion); color: var(--accent); }
+@keyframes bd-strip { to { transform: translate3d(-50%, 0, 0); } }
+/* an oversized outlined monogram, cropped by the corner of the screen */
+.bd-mono {
+  right: -1vw; bottom: -8vh; font-family: var(--font-archivo), "Arial Black", sans-serif;
+  font-size: min(48vw, 66vh); line-height: 0.8; letter-spacing: -0.05em; color: transparent;
+  -webkit-text-stroke: 1px rgba(var(--ink-warm), 0.11);
+}
+/* two hairlines that drift slowly across the desk */
+.bd-line-v { left: 19vw; top: -10%; height: 120%; width: 1px; background: linear-gradient(to bottom, transparent, rgba(255, 89, 61, 0.55) 30%, rgba(255, 89, 61, 0.55) 70%, transparent); animation: bd-lv 70s ease-in-out infinite alternate; }
+.bd-line-h { top: 79vh; left: -5%; width: 110%; height: 1px; background: linear-gradient(to right, transparent, rgba(var(--ink-warm), 0.3) 25%, rgba(var(--ink-warm), 0.3) 75%, transparent); animation: bd-lh 80s ease-in-out infinite alternate; }
+@keyframes bd-lv { to { transform: translate3d(28px, 0, 0); } }
+@keyframes bd-lh { to { transform: translate3d(0, -26px, 0); } }
+/* registration marks in the corners */
+.bd-reg { width: 20px; height: 20px; }
+.bd-reg::before, .bd-reg::after { content: ""; position: absolute; background: rgba(var(--ink-warm), 0.5); }
+.bd-reg::before { left: 9px; top: 0; width: 1px; height: 20px; }
+.bd-reg::after { top: 9px; left: 0; height: 1px; width: 20px; }
+.bd-reg-tl { left: 54px; top: 62px; } .bd-reg-tr { right: 22px; top: 62px; }
+.bd-reg-bl { left: 54px; bottom: 22px; } .bd-reg-br { right: 22px; bottom: 22px; }
+.bd-reg-tl::before, .bd-reg-tl::after, .bd-reg-br::before, .bd-reg-br::after { background: var(--vermilion); }
+/* paper grain: one small tiled noise, static, no blend modes */
+.bd-grain {
+  inset: 0; opacity: 0.9;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35 0 0 0 0 .28 0 0 0 0 .18 0 0 0 .09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>") 0 0 / 160px 160px;
+}
+.bd-vignette { inset: 0; background: radial-gradient(ellipse 75% 70% at 50% 46%, transparent 55%, rgba(var(--ink-warm), 0.2) 100%); }
+
+/* phones and touch screens: no moving parts, and the loose sheets are dropped */
+@media (max-width: 820px), (pointer: coarse) {
+  .bd-sheet, .bd-strip-track, .bd-line-v, .bd-line-h { animation: none; }
+  .bd-sheet-b, .bd-strip, .bd-mono { display: none; }
+  .bd-sheet-a { left: -8vw; width: 60vw; opacity: 0.6; }
+  .bd-ruler { display: none; }
+  .bd-reg-tl, .bd-reg-bl { left: 14px; }
+}
+/* the plain edition: the same desk, calmer, so long text stays easy to read */
+:is([data-dm="static"], html:not(.js)) .bd { opacity: 0.55; }
+:is([data-dm="static"], html:not(.js)) :is(.bd-sheet, .bd-strip-track, .bd-line-v, .bd-line-h) { animation: none; }
+:is([data-dm="static"], html:not(.js)) :is(.bd-sheet, .bd-mono, .bd-glow) { display: none; }
+
+/* ==========================================================================================
    PHYSICAL STATE
    Dossier.tsx writes two numbers (0 → 1) onto the elements marked [data-drive]:
      --ra  rotation   0 = landscape      1 = portrait
      --op  opening    0 = closed         1 = open (right cover swung to the left)
-   and, on every sheet (surface), its own turn --t (0 → 1) and reveal progress --p (0 → 1).
-   They are derived from the scroll position and from nothing else, which is why everything
-   reverses on its own when you scroll back. They are registered with inherits:false so changing
-   them restyles only the few driven elements, never the page text below them.
+   and, on every sheet (surface), its own turn --t (0 → 1). They are derived from one position `u` that
+   the engine moves in real time. They are registered with inherits:false so changing them restyles
+   only the few driven elements, never the page text below them.
    ========================================================================================== */
 @property --ra { syntax: "<number>"; inherits: false; initial-value: 0; }
 @property --op { syntax: "<number>"; inherits: false; initial-value: 0; }
@@ -82,8 +193,10 @@ body {
 @property --ty { syntax: "<number>"; inherits: false; initial-value: 0; }
 @property --t { syntax: "<number>"; inherits: false; initial-value: 0; }
 @property --lc { syntax: "<number>"; inherits: false; initial-value: 0; }
-@property --te { syntax: "<number>"; inherits: false; initial-value: 0; }
 @property --sh { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --cs { syntax: "<number>"; inherits: false; initial-value: 0; }
+/* the draw progress of one block of text, 0 → 1 (see REVEAL below) */
+@property --w { syntax: "<number>"; inherits: false; initial-value: 1; }
 
 [data-drive] {
   --a: calc(var(--ra) * var(--ra) * (3 - 2 * var(--ra)));      /* eased rotation */
@@ -93,20 +206,29 @@ body {
   --scale: calc(var(--ls, 1) + (1 - var(--ls, 1)) * var(--a) - var(--arc) * var(--dip, 0)); /* landscape is larger; pulled back mid-turn so it fits */
 }
 
-/* No script, or the plain document: show the finished state, nothing staged. */
-html:not(.js) [data-drive],
-[data-dm="static"] [data-drive] { --ra: 1; --op: 1; }
+/* Phones and portrait tablets: the folder is already upright (also correct before the script runs). */
+[data-dm="single"] [data-drive] { --ra: 1; }
 
 /* ==========================================================================================
-   THE DOSSIER
+   PRESENTATION SWITCH
    <html data-dm="spread | single | static"> picks the presentation (see layout.tsx / Dossier.tsx).
-   Rules without a data-dm prefix describe the plain document, which is also what you get without
-   JavaScript. Folder geometry (--pw, --ph, --ls, --dip, --dy, --total) is written before first paint.
+   The folder is for spread and single; the plain edition is for static and for no JavaScript.
    ========================================================================================== */
+.plain-wrap { display: none; }
+:is([data-dm="static"], html:not(.js)) .plain-wrap { display: block; }
+:is([data-dm="static"], html:not(.js)) .d-track,
+:is([data-dm="static"], html:not(.js)) .d-dock,
+:is([data-dm="static"], html:not(.js)) .d-cue,
+:is([data-dm="static"], html:not(.js)) > body > .d-root > .d-toggle { display: none; }
+
+/* the folder owns the whole window: nothing scrolls, the page is turned instead */
+html:is([data-dm="spread"], [data-dm="single"]),
+html:is([data-dm="spread"], [data-dm="single"]) body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+
 :root {
   --pw: min(calc(100vw - 28px), 420px);
   --ph: calc(var(--pw) / 0.72);
-  --ls: 1; --dip: 0; --dy: 0px; --total: 14;
+  --ls: 1; --dip: 0; --dy: 0px;
   --persp: 5400px;   /* one perspective for the lid and every sheet, so they always agree */
   --bd: 14px;        /* the dark folder board around the paper */
   --shift: 0;        /* how far (in pages) the folder slides right as it opens */
@@ -125,28 +247,30 @@ html:not(.js) [data-drive],
   visibility: hidden; pointer-events: none;
 }
 
-/* "Plain view" / "Animated view": an accessibility affordance, not navigation. Tucked into the bottom
-   corner, inside the room the folder leaves free. */
+/* "Plain view" / "Folder view": an alternative way to read, not navigation. Tucked into the bottom corner. */
 .d-toggle {
   position: fixed; z-index: 60; left: max(10px, env(safe-area-inset-left, 0px));
   bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--muted);
-  background: var(--desk); border: 1px solid var(--rule); border-radius: 3px; min-width: 2.25rem; height: 2.25rem; padding: 0 0.6rem;
-  font-family: var(--font-geist-mono), monospace; font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase;
-  transition: color 0.2s, border-color 0.2s;
+  background: var(--paper); border: 1px solid var(--fg); border-radius: 2px; min-width: 2.75rem; height: 2.75rem; padding: 0 0.8rem;
+  font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 600; font-size: 0.82rem; letter-spacing: 0.01em;
+  cursor: pointer; transition: color 0.2s, background-color 0.2s;
 }
-.d-toggle:hover { color: var(--fg); border-color: var(--muted); }
+.d-toggle:hover { color: var(--paper); background: var(--fg); }
 .d-toggle-text { display: none; }
 @media (min-width: 640px) { .d-toggle-text { display: inline; } }
-:is([data-dm="static"], html:not(.js)) .d-toggle { position: static; margin: 0.75rem 0.75rem 0; width: fit-content; }
+/* inside the plain edition's masthead it is part of the bar, not a floating control */
+.pe-switch { position: static; background: transparent; color: var(--folder-ink); border-color: rgba(246, 241, 231, 0.55); height: 2.5rem; }
+.pe-switch:hover { background: var(--folder-ink); color: var(--folder); }
+.pe-switch .d-toggle-text { display: inline; }
 
 /* ---------------------------------------------------------------- the folder ------------- */
 /* The folder shell is always built portrait; landscape is the same shell turned a quarter turn. */
 
-/* the spine: the thickness of the fold the lid hinges on */
+/* the spine: the thickness of the fold the lid hinges on, a flat darker plane of the same black */
 .d-spine {
-  position: absolute; left: -5px; top: 0; bottom: 0; width: 10px; border-radius: 3px;
-  background: linear-gradient(90deg, #0a0a0b, #2a2b30 40%, #15161a 62%, #0a0a0b);
+  position: absolute; left: -5px; top: 0; bottom: 0; width: 10px; border-radius: 2px 0 0 2px;
+  background: var(--folder-dk); box-shadow: inset -2px 0 0 rgba(255, 255, 255, 0.06), inset 1px 0 0 rgba(255, 255, 255, 0.12);
   transform: translateZ(1px);
 }
 
@@ -157,55 +281,50 @@ html:not(.js) [data-drive],
   will-change: transform;
 }
 .d-lid-face {
-  position: absolute; inset: 0; border-radius: 4px;
+  position: absolute; inset: 0; border-radius: 2px;
   -webkit-backface-visibility: hidden; backface-visibility: hidden;
 }
 .d-lid-front {
   color: var(--folder-ink);
+  /* matte black board with a paper tooth: one tiny tiled noise, blended softly */
   background:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.55'/></svg>"),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 38%, rgba(0, 0, 0, 0.2)),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.5'/></svg>"),
     var(--folder);
-  background-blend-mode: soft-light, normal, normal;
-  /* a hairline lighter edge on the top-left, darker on the bottom-right: board thickness */
-  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.1), inset -1px -1px 0 rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 14px 30px -14px rgba(0, 0, 0, 0.55);
+  background-blend-mode: soft-light, normal;
+  /* a lighter edge top-left and a darker one bottom-right: board thickness. Neutral warm cast shadow. */
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.2), inset -1px -1px 0 rgba(0, 0, 0, 0.7), 0 0 0 1px var(--folder-dk), 0 16px 30px -16px rgba(var(--ink-warm), 0.7);
 }
-/* hairline frame blind-stamped into the cover */
+/* a ruled frame printed into the cover */
 .d-lid-front::before {
-  content: ""; position: absolute; inset: 14px; border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 2px; pointer-events: none;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+  content: ""; position: absolute; inset: 14px; border: 1px solid rgba(246, 241, 231, 0.24);
+  border-radius: 0; pointer-events: none;
 }
-/* the cover darkens as it turns away from the light while it swings */
-.d-lid-front::after {
-  content: ""; position: absolute; inset: 0; border-radius: 4px; pointer-events: none;
-  background: linear-gradient(100deg, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.55));
+/* the cover darkens as it turns away from the light while it swings (a real element: see Folder.tsx) */
+.d-lid-shade {
+  position: absolute; inset: 0; border-radius: 2px; pointer-events: none;
+  background: linear-gradient(100deg, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.6));
   opacity: var(--e);
 }
 .d-lid-back {
   transform: rotateY(180deg);
-  background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0) 9%),
-    linear-gradient(200deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.18)),
-    var(--folder-2);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 16px 34px -16px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0) 9%), var(--folder-2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 0 0 1px var(--folder-dk), 0 16px 34px -16px rgba(var(--ink-warm), 0.7);
   color: var(--folder-ink);
 }
 
-/* tab and crop marks */
+/* the orange index tab, and the score line where the cover folds at the spine */
 .d-lid-tab {
-  position: absolute; left: clamp(1.4rem, 7%, 3.4rem); top: -1.7rem; height: 1.7rem; padding: 0 1.6rem;
+  position: absolute; left: clamp(1.4rem, 7%, 3.4rem); top: -1.9rem; height: 1.9rem; padding: 0 1.7rem;
   display: flex; align-items: center;
-  font-family: var(--font-geist-mono), monospace; font-size: 0.64rem; letter-spacing: 0.22em; text-transform: uppercase;
-  color: var(--folder-mute); background: var(--folder);
+  font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--fg); background: var(--vermilion);
   clip-path: polygon(0 100%, 7% 0, 93% 0, 100% 100%);
 }
-/* the score line where the cover folds at the spine */
 .d-crease {
   position: absolute; top: 0; bottom: 0; left: 3.4%; width: 10px; pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.4) 45%, rgba(255, 255, 255, 0.07) 58%, transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.6) 45%, rgba(255, 255, 255, 0.08) 58%, transparent);
 }
-.d-crop { position: absolute; width: 14px; height: 14px; border: 0 solid rgba(255, 255, 255, 0.28); }
+.d-crop { position: absolute; width: 14px; height: 14px; border: 0 solid rgba(246, 241, 231, 0.4); }
 .d-crop-tl { top: 6px; left: 6px; border-top-width: 1px; border-left-width: 1px; }
 .d-crop-tr { top: 6px; right: 6px; border-top-width: 1px; border-right-width: 1px; }
 .d-crop-bl { bottom: 6px; left: 6px; border-bottom-width: 1px; border-left-width: 1px; }
@@ -228,213 +347,68 @@ html:not(.js) [data-drive],
   position: absolute; inset: 0; padding: clamp(1.1rem, 4.6cqw, 3.2rem);
   display: flex; flex-direction: column; justify-content: space-between; gap: 1rem;
 }
-.d-cover-top, .d-cover-bottom {
-  display: flex; justify-content: space-between; gap: 1rem; min-width: 0;
-  font-family: var(--font-geist-mono), monospace; font-size: 0.66rem; letter-spacing: 0.16em;
+.d-cover-top {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; min-width: 0;
+  font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.72rem; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--folder-mute);
 }
-.d-cover-top span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.d-cover-main { display: flex; flex-direction: column; gap: 1.1rem; }
+.d-cover-top > div { display: flex; flex-direction: column; gap: 0.4em; min-width: 0; }
+.d-cover-top > div span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the circular orange index mark */
+.d-index-mark {
+  flex: none; display: grid; place-items: center; width: clamp(2.6rem, 8cqw, 4rem); aspect-ratio: 1; border-radius: 50%;
+  background: var(--vermilion); color: var(--fg);
+  font-family: var(--font-archivo), "Arial Black", sans-serif; font-size: clamp(0.95rem, 2.8cqw, 1.45rem); letter-spacing: -0.02em; text-transform: none;
+}
+.d-cover-main { display: flex; flex-direction: column; gap: 1.2rem; margin-top: auto; }
 .d-cover-name {
-  margin: 0; font-family: var(--font-serif), serif; font-weight: 400;
-  font-size: calc(9.6cqw + 8.8cqw * var(--af)); line-height: 0.94; letter-spacing: -0.025em;
-  color: var(--folder-ink);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.07), 0 -1px 0 rgba(0, 0, 0, 0.55);
+  margin: 0; font-family: var(--font-archivo), "Arial Black", sans-serif; font-weight: 400; text-transform: uppercase;
+  line-height: 0.86; letter-spacing: -0.03em; color: var(--folder-ink);
 }
 .d-nw { display: block; }
 .d-cover-role {
-  margin: 0; font-family: var(--font-geist-mono), monospace;
-  font-size: max(0.72rem, calc(1.5cqw + 1.2cqw * var(--af)));
-  letter-spacing: 0.05em; color: rgba(239, 233, 220, 0.82);
+  margin: 0; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 500;
+  line-height: 1.3; letter-spacing: 0.005em; color: var(--folder-ink);
 }
 .d-cover-role::before {
-  content: ""; display: block; width: 3.2rem; height: 2px; background: var(--accent-dk); margin-bottom: 1.1rem;
+  content: ""; display: block; width: 3.4rem; height: 6px; background: var(--vermilion); margin-bottom: 1.1rem;
 }
-.d-cover-bottom { align-items: flex-end; text-transform: none; letter-spacing: 0.04em; font-size: 0.72rem; line-height: 1.5; }
-.d-cover-bottom > div:first-child { display: flex; flex-direction: column; gap: 0.3rem; max-width: 62%; }
-.d-cover-label { text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.62rem; color: var(--accent-dk); }
-/* the contents line is printed on the landscape cover and fades as the folder turns */
-.d-cover-contents {
-  position: absolute; left: clamp(1.1rem, 4.6cqw, 3.2rem); right: clamp(1.1rem, 4.6cqw, 3.2rem);
-  bottom: calc(clamp(1.1rem, 4.6cqw, 3.2rem) + 3.6rem);
-  display: flex; flex-direction: column; gap: 0.3rem;
-  font-family: var(--font-geist-mono), monospace; font-size: 0.72rem; letter-spacing: 0.04em; line-height: 1.5;
-  color: var(--folder-mute);
-  opacity: clamp(0, calc(1 - var(--af) * 3), 1);
+:is([data-dm="spread"], [data-dm="single"]) .d-cover-name { font-size: calc(9.6cqw + 8.8cqw * var(--af)); }
+:is([data-dm="spread"], [data-dm="single"]) .d-cover-role { font-size: max(0.8rem, calc(1.5cqw + 1.2cqw * var(--af))); }
+.d-root[data-state="start"][data-lidtop="1"] .d-object { cursor: pointer; }
+
+/* ---------------------------------------------------------------- the scroll invitation ----- */
+/* A quiet cue on the desk below the closed folder. Not a button-shaped call to action. */
+.d-cue {
+  position: fixed; z-index: 65; left: 50%; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 0.35rem; min-height: 2.75rem; min-width: 2.75rem; padding: 0.2rem 0.9rem 0;
+  background: none; border: 0; cursor: pointer; color: var(--fg);
+  font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 500; font-size: 0.86rem; letter-spacing: 0.02em;
+  opacity: 0; visibility: hidden; transition: opacity 0.45s ease, visibility 0s 0.45s;
 }
-.d-cover-cue {
-  display: flex; flex-direction: row; align-items: center; gap: 0.6rem;
-  text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.64rem;
-  opacity: clamp(0, calc(1 - var(--af) * 3), 1);
-}
-/* small covers have no room for the printed contents line */
-@container (max-width: 640px) { .d-cover-contents { display: none; } }
-.d-cover-cue svg { animation: d-cue 2.2s ease-in-out infinite; color: var(--accent-dk); }
-@keyframes d-cue { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+.d-root[data-state="start"] .d-cue, .d-root[data-state="end"] .d-cue { opacity: 1; visibility: visible; transition: opacity 0.6s ease 0.5s, visibility 0s; }
+.d-root[data-phase="turning"] .d-cue { opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0s 0.3s; }
+.d-cue-text { color: var(--muted); }
+.d-cue:hover .d-cue-text { color: var(--fg); }
+.d-cue-line { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; color: var(--accent); animation: d-cue-nudge 2.4s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+@keyframes d-cue-nudge { 0%, 100% { transform: translateY(-2px); opacity: 0.55; } 50% { transform: translateY(4px); opacity: 1; } }
 
 /* ==========================================================================================
-   PLAIN DOCUMENT (base): reduced motion, "Plain view", windows too short for a page, or no JavaScript.
-   Also what animated modes are built on. Nothing here is positioned or animated.
+   ANIMATED (spread + single): one fixed stage. The folder turns, opens, its pages are turned,
+   then it closes and turns back. Everything inside .d-object is ONE physical object.
+   Both presentations share all of this; they differ only in geometry (--pw, --ph), in how the sheets
+   are paired up (see below) and in how far a sheet swings.
    ========================================================================================== */
-.d-track { position: relative; }
-.d-stage, .d-object { display: block; }
-.d-shadow { display: none; }
-.d-cover-wrap { display: block; padding: 1rem 0.75rem 0.75rem; }
-:is([data-dm="static"], html:not(.js)) .d-lid-holder { position: relative; width: 100%; max-width: 1100px; margin: 0 auto; }
-:is([data-dm="static"], html:not(.js)) .d-lid { position: relative; inset: auto; transform: none; will-change: auto; }
-:is([data-dm="static"], html:not(.js)) .d-lid-face { position: relative; inset: auto; }
-:is([data-dm="static"], html:not(.js)) .d-lid-back, :is([data-dm="static"], html:not(.js)) .d-spine, :is([data-dm="static"], html:not(.js)) .d-lid-front::before, :is([data-dm="static"], html:not(.js)) .d-lid-front::after, :is([data-dm="static"], html:not(.js)) .d-orn { display: none; }
-:is([data-dm="static"], html:not(.js)) .d-cover { position: relative; left: auto; top: auto; width: auto; height: auto; container-type: normal; transform: none; opacity: 1; }
-:is([data-dm="static"], html:not(.js)) .d-print { position: relative; inset: auto; padding: 2.2rem 1.6rem; }
-:is([data-dm="static"], html:not(.js)) .d-cover-name { font-size: clamp(2.8rem, 8vw, 5.4rem); }
-:is([data-dm="static"], html:not(.js)) .d-cover-role { font-size: clamp(0.8rem, 2.4vw, 1rem); }
-:is([data-dm="static"], html:not(.js)) .d-cover-cue, :is([data-dm="static"], html:not(.js)) .d-cover-contents { display: none; }
-
-.d-frame { position: relative; margin: 0 auto; max-width: 1100px; background: var(--folder); padding: 0.75rem; border-radius: 10px; }
-.d-frame-tab { display: none; }
-.d-pages { display: grid; gap: 0.75rem; }
-.d-page { display: grid; gap: 0.75rem; grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 900px) { .d-page { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
-.d-surface { position: relative; scroll-margin-top: 0.75rem; }
-.d-face { position: relative; container: page / inline-size; }
-.d-back { display: none; }
-
-/* ---------------------------------------------------------------- the sheet --------------- */
-/* One sheet = header, body, footer, always stacked in normal flow: nothing can overlap. */
-.d-sheet {
-  --px: clamp(1.1rem, 4.6cqw, 2.2rem); --py: clamp(0.9rem, 3.4cqw, 1.5rem);
-  position: relative; display: flex; flex-direction: column; min-width: 0;
-  background: var(--paper); color: var(--fg); border: 1px solid var(--rule); border-radius: 3px;
-  padding: var(--py) var(--px); font-size: 1rem; line-height: 1.5; overflow-wrap: break-word;
-}
-.d-runhead, .d-runfoot {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 0.4em 1rem; flex-wrap: wrap;
-  font-family: var(--font-geist-mono), monospace; color: var(--muted);
-}
-.d-runhead { flex: none; font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; padding-bottom: 0.7rem; border-bottom: 1px solid var(--rule); }
-.d-runfoot { flex: none; min-height: 1.6rem; font-size: 0.72rem; line-height: 1.45; border-top: 1px solid var(--rule); padding-top: 0.7rem; }
-.d-runfoot-note { text-align: right; margin-left: auto; max-width: 40em; }
-.d-runfoot a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-.d-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 1.1rem 0 1.1rem; }
-.d-stack { display: flex; flex-direction: column; gap: 0.95em; min-width: 0; }
-.d-stack-center { flex: 1 1 auto; justify-content: center; }
-.d-head { display: flex; flex-direction: column; gap: 0.75em; }
-.d-edu { display: flex; flex-direction: column; gap: 0.8em; }
-
-/* ---------------------------------------------------------------- type ------------------- */
-/* Hierarchy: editorial title > section heading > body > metadata and labels > micro-labels. */
-.d-act { margin: 0; font-family: var(--font-serif), serif; font-weight: 400; font-size: 1.9em; line-height: 1.1; letter-spacing: -0.015em; }
-.d-act-no { font-family: var(--font-geist-mono), monospace; font-size: 0.38em; letter-spacing: 0.2em; color: var(--accent); vertical-align: 0.95em; margin-right: 0.8em; }
-.d-display { margin: 0; font-family: var(--font-serif), serif; font-weight: 400; font-size: 3.1em; line-height: 1; letter-spacing: -0.025em; }
-.d-display-md { font-size: 2.3em; line-height: 1.04; }
-.d-title { margin: 0; font-family: var(--font-serif), serif; font-weight: 400; font-size: 1.6em; line-height: 1.12; letter-spacing: -0.01em; }
-.d-title-lg { font-size: 2em; }
-.d-title-sub { font-size: 1.35em; margin-top: 0.5em; }
-.d-company { margin: 0; font-weight: 500; font-size: 1.05em; }
-.d-meta { margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 0.82em; color: var(--muted); line-height: 1.55; }
-.d-kicker { margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 0.72em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); line-height: 1.55; }
-.d-caption { margin: 0.4em 0 0; font-family: var(--font-geist-mono), monospace; font-weight: 400; font-size: 0.7em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-.d-p { margin: 0; line-height: 1.6; }
-.d-lead { margin: 0; font-size: 1.12em; line-height: 1.6; max-width: 34em; }
-.d-role { margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 0.95em; color: var(--muted); line-height: 1.5; }
-.d-muted { color: var(--muted); }
-.d-rolenote { margin: 0; font-family: var(--font-geist-mono), monospace; font-size: 0.78em; line-height: 1.5; border-left: 2px solid var(--muted); padding: 0.15em 0 0.15em 0.8em; color: var(--fg); }
-.d-rolenote-solo { border-left-color: var(--accent); color: var(--accent); }
-.d-stamp { display: inline-block; width: fit-content; margin: 0.8em 0 0; font-family: var(--font-geist-mono), monospace; font-size: 0.8em; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); border: 2px solid var(--accent); border-radius: 3px; padding: 0.6em 1.1em; }
-.d-rule { height: 1px; width: 100%; background: var(--fg); opacity: 0.55; }
-.d-rule-gap { margin: 0.4em 0; }
-
-.d-bullets { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6em; }
-.d-bullets > li { position: relative; padding-left: 1.2em; line-height: 1.55; }
-.d-bullets > li::before { content: ""; position: absolute; left: 0; top: 0.8em; width: 0.6em; height: 1px; background: var(--accent); }
-.d-tags { display: flex; flex-wrap: wrap; gap: 0.45em; list-style: none; margin: 0; padding: 0; }
-.d-tag { font-family: var(--font-geist-mono), monospace; font-size: 0.76em; color: var(--muted); border: 1px solid var(--rule); border-radius: 2px; padding: 0.22em 0.6em; overflow-wrap: anywhere; }
-.d-links { display: flex; flex-wrap: wrap; gap: 0.6em; }
-.d-btn { display: inline-flex; align-items: center; gap: 0.55em; padding: 0.6em 1em; font-size: 0.86em; border: 1px solid var(--fg); background: var(--fg); color: var(--paper); border-radius: 3px; transition: background 0.2s, border-color 0.2s, color 0.2s; }
-.d-btn:hover { background: var(--accent); border-color: var(--accent); color: var(--paper); }
-.d-btn-ghost { background: transparent; color: var(--fg); border-color: var(--rule); }
-.d-btn-ghost:hover { background: transparent; color: var(--accent); border-color: var(--accent); }
-
-/* portrait */
-.d-portrait { margin: 0; display: flex; flex-direction: column; gap: 0.6em; flex: 1 1 auto; min-height: 0; }
-.d-portrait-image { display: block; width: 100%; height: auto; aspect-ratio: 9 / 11; max-height: 70vh; object-fit: cover; object-position: 50% 14%; border: 1px solid var(--rule); border-radius: 2px; }
-.d-portrait-caption { font-family: var(--font-geist-mono), monospace; font-size: 0.7em; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
-
-/* archive index (experience overview) */
-.d-index { list-style: none; margin: 0; padding: 0; display: grid; }
-.d-index-row { display: grid; grid-template-columns: 2.4em minmax(0, 1fr); gap: 0.6em; padding: 0.7em 0; border-top: 1px solid var(--rule); }
-.d-index > li:last-child .d-index-row { border-bottom: 1px solid var(--rule); }
-.d-index-no { font-family: var(--font-geist-mono), monospace; font-size: 0.78em; color: var(--accent); padding-top: 0.25em; }
-.d-index-name { display: block; font-family: var(--font-serif), serif; font-size: 1.2em; line-height: 1.2; }
-.d-index-label { display: block; font-family: var(--font-geist-mono), monospace; font-size: 0.76em; color: var(--muted); margin-top: 0.25em; }
-.d-index-label.is-solo { color: var(--accent); }
-
-/* AI Resume Analyzer: process strip */
-.d-pipe { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); border: 1px solid var(--rule); }
-.d-pipe-node { display: flex; flex-direction: column; gap: 0.3em; padding: 0.7em 0.95em; }
-.d-pipe-node + .d-pipe-node { border-top: 1px solid var(--rule); }
-.d-pipe-step { font-family: var(--font-geist-mono), monospace; font-size: 0.68em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
-.d-pipe-label { font-family: var(--font-serif), serif; font-size: 1.1em; line-height: 1.25; }
-@container page (min-width: 470px) {
-  .d-pipe { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .d-pipe-node:nth-child(2) { border-top: 0; border-left: 1px solid var(--rule); }
-  .d-pipe-node:nth-child(4) { border-left: 1px solid var(--rule); }
-}
-
-/* skills: system inventory */
-.d-inv-group { display: block; }
-.d-inv-head { display: flex; align-items: baseline; gap: 0.7em; margin: 0 0 0.4em; padding-bottom: 0.4em; border-bottom: 1px solid var(--fg); font-family: var(--font-geist-mono), monospace; font-weight: 400; font-size: 0.74em; letter-spacing: 0.14em; text-transform: uppercase; }
-.d-inv-letter { color: var(--accent); }
-.d-inv-count { margin-left: auto; color: var(--muted); }
-.d-inv-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 2em; }
-@container page (min-width: 440px) { .d-inv-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.d-inv-list li { display: flex; gap: 0.8em; padding: 0.14em 0; font-size: 0.98em; line-height: 1.35; border-bottom: 1px dotted var(--rule); }
-.d-inv-no { width: 1.9em; flex: none; padding-top: 0.3em; font-family: var(--font-geist-mono), monospace; font-size: 0.7em; color: var(--muted); }
-
-/* contact */
-.d-contact { list-style: none; margin: 0; padding: 0; max-width: 32em; border-top: 1px solid var(--rule); }
-.d-contact li { border-bottom: 1px solid var(--rule); }
-.d-contact-link { display: flex; align-items: center; gap: 0.9em; padding: 0.95em 0; transition: color 0.2s; }
-.d-contact-link span { overflow-wrap: anywhere; }
-.d-contact-link:hover { color: var(--accent); }
-.d-end { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6em 1.6em; font-family: var(--font-geist-mono), monospace; font-size: 0.76em; color: var(--muted); line-height: 1.5; }
-.d-backtop { margin-left: auto; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-
-/* ---------------------------------------------------------------- reveal ------------------- */
-/* Every .write block gets --r (0 → 1) from its sheet's reveal progress --p and its own --s (start) and
-   --k (1 / duration). A calm fade with a very small rise, block by block. Once a sheet is fully
-   revealed ([data-done]) every transform is dropped, so resting text is crisp and costs nothing.
-   Without JavaScript, or in the plain document, --r is simply 1. */
-.write { --r: 1; }
-.js .write { --r: clamp(0, calc((var(--p, 0) - var(--s, 0)) * var(--k, 1)), 1); }
-:is([data-dm="static"], html:not(.js)) .write { --r: 1 !important; }
-.write-block { opacity: var(--r); transform: translate3d(0, calc((1 - var(--r)) * 0.4em), 0); }
-.write-stamp { opacity: clamp(0, calc(var(--r) * 3), 1); transform: rotate(-1.5deg) scale(calc(1 + (1 - var(--r)) * 0.18)); transform-origin: left center; }
-.write-stagger > * { --wr: clamp(0, calc(var(--r) * 2.2 - var(--i, 0) * 1.2), 1); opacity: var(--wr); transform: translate3d(calc((1 - var(--wr)) * -0.5em), 0, 0); }
-.write-rule { transform-origin: left; transform: scaleX(var(--r)); }
-.d-bullets > li::before { transform-origin: left; transform: scaleX(clamp(0, calc(var(--r) * 4), 1)); }
-[data-done="1"] .write, [data-measuring] .write { --r: 1; opacity: 1; transform: none; }
-[data-done="1"] .write-stamp, [data-measuring] .write-stamp { transform: rotate(-1.5deg); }
-[data-done="1"] .write-stagger > *, [data-measuring] .write-stagger > * { opacity: 1; transform: none; }
-[data-done="1"] .d-bullets > li::before, [data-measuring] .d-bullets > li::before { transform: none; }
-:is([data-dm="static"], html:not(.js)) .write, :is([data-dm="static"], html:not(.js)) .write-stagger > * { opacity: 1; transform: none; }
-:is([data-dm="static"], html:not(.js)) .write-stamp { transform: rotate(-1.5deg); }
-
-
-/* ==========================================================================================
-   ANIMATED (spread + single): one pinned stage. The folder turns, opens, its pages are turned by
-   scrolling, then it closes and turns back. Everything inside .d-object is ONE physical object.
-   Both presentations share all of this; they differ only in geometry (--pw, --ph), in how the sheets are
-   paired up (see below) and in how far a sheet swings.
-   ========================================================================================== */
-:is([data-dm="spread"], [data-dm="single"]) .d-track { height: calc(var(--total) * 100vh); height: calc(var(--total) * 100svh); }
-:is([data-dm="spread"], [data-dm="single"]) .d-stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
+:is([data-dm="spread"], [data-dm="single"]) .d-track { height: 100vh; height: 100svh; }
+:is([data-dm="spread"], [data-dm="single"]) .d-stage { position: fixed; inset: 0; height: 100vh; height: 100svh; overflow: hidden; }
 
 /* The object is the closed portrait folder, centred in the stage. Every state is a transform of it:
      rotateZ   landscape → portrait (a rigid quarter turn of the whole object)
      rotateX/Y a small lift-and-tilt while it turns, plus a gentle pointer tilt while it is closed
      scale     landscape is shown larger, settling to 1
      translate (spread only) slides right by half a page as the lid opens so the open spread is centred */
+.d-stage, .d-object { display: block; }
+.d-shadow { display: none; }
 :is([data-dm="spread"], [data-dm="single"]) .d-object {
   position: absolute; left: 50%; top: calc(50% + var(--dy)); width: var(--pw); height: var(--ph);
   margin: calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2);
@@ -448,9 +422,9 @@ html:not(.js) [data-drive],
     rotateZ(var(--turn));
   will-change: transform;
   /* the folder is presented as soon as the page paints: pure CSS, no script or timer involved */
-  animation: d-enter 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  animation: d-enter 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
-@keyframes d-enter { from { opacity: 0; translate: 0 26px; } }
+@keyframes d-enter { from { opacity: 0; translate: 0 22px; } }
 /* Fully open: a plain translation (crisp text, no 3D resampling). */
 :is([data-dm="spread"], [data-dm="single"]) .d-root[data-settled="1"] .d-object {
   transform: translate3d(calc(var(--pw) * var(--shift)), 0, 0);
@@ -468,10 +442,10 @@ html:not(.js) [data-drive],
 :is([data-dm="spread"], [data-dm="single"]) .d-shadow {
   display: block; position: absolute; inset: 0; border-radius: 4px; pointer-events: none;
   transform: translate3d(0, 0, -12px);
-  box-shadow: 0 0 34px 2px rgba(40, 28, 10, 0.22), 0 6px 14px -4px rgba(40, 28, 10, 0.34);
+  box-shadow: 0 0 34px 2px rgba(var(--ink-warm), 0.26), 0 6px 14px -4px rgba(var(--ink-warm), 0.4);
 }
 :is([data-dm="spread"], [data-dm="single"]) .d-shadow::after {
-  content: ""; position: absolute; inset: 0; border-radius: 4px; box-shadow: 0 34px 70px -6px rgba(40, 28, 10, 0.4); opacity: var(--arc);
+  content: ""; position: absolute; inset: 0; border-radius: 4px; box-shadow: 0 34px 70px -6px rgba(var(--ink-warm), 0.45); opacity: var(--arc);
 }
 
 /* ---- the lid -------------------------------------------------------------------------------
@@ -485,35 +459,27 @@ html:not(.js) [data-drive],
   position: absolute; inset: 0; width: auto; max-width: none; margin: 0;
   perspective: var(--persp); perspective-origin: 0 50%;
 }
-:is([data-dm="spread"], [data-dm="single"]) .d-lid { position: absolute; inset: 0; transform: translate3d(0, 0, 3px) rotateY(calc(var(--e) * -180deg)); will-change: transform; }
 :is([data-dm="spread"], [data-dm="single"]) .d-lid-face { position: absolute; inset: 0; }
-:is([data-dm="spread"], [data-dm="single"]) .d-cover {
-  position: absolute; left: 50%; top: 50%;
-  width: calc(var(--ph) * (1 - var(--a)) + var(--pw) * var(--a));
-  height: calc(var(--pw) * (1 - var(--a)) + var(--ph) * var(--a));
-  container-type: size;
-  transform: translate(-50%, -50%) rotate(calc(var(--turn) * -1)) scale(calc(1 - var(--arc) * 0.3));
-  opacity: calc(1 - var(--arc) * 0.35);
-}
 :is([data-dm="spread"], [data-dm="single"]) .d-print { position: absolute; inset: 0; padding: clamp(1.1rem, 4.6cqw, 3.2rem); }
-:is([data-dm="spread"], [data-dm="single"]) .d-cover-name { font-size: calc(9.6cqw + 8.8cqw * var(--af)); }
-:is([data-dm="spread"], [data-dm="single"]) .d-cover-role { font-size: max(0.72rem, calc(1.5cqw + 1.2cqw * var(--af))); }
-.d-cue-start, .d-cue-end { display: inline-flex; align-items: center; gap: 0.6rem; }
-.d-cue-end { display: none; }
-.d-root[data-end="1"] .d-cue-start { display: none; }
-.d-root[data-end="1"] .d-cue-end { display: inline-flex; }
 
 /* ---- the back board with the sheets in it: the right-hand page of the open folder ---------- */
 :is([data-dm="spread"], [data-dm="single"]) .d-frame {
   position: absolute; inset: 0; z-index: var(--zf); max-width: none; margin: 0; padding: var(--bd); border-radius: 4px;
+  background: var(--folder);
   transform: translateZ(var(--zfz));
-  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.08), inset -1px -1px 0 rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.55);
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.16), inset -1px -1px 0 rgba(0, 0, 0, 0.7), 0 0 0 1px var(--folder-dk);
+}
+/* the shadow the lid throws across the pages while it swings over them (a real element, see Folder.tsx) */
+:is([data-dm="spread"], [data-dm="single"]) .d-frame-shade {
+  display: block; position: absolute; inset: 0; z-index: 90; pointer-events: none; border-radius: 4px;
+  background: linear-gradient(270deg, rgba(var(--ink-warm), 0.4), rgba(var(--ink-warm), 0) 60%);
+  opacity: calc(4 * var(--e) * (1 - var(--e)));
 }
 /* the physical tab: its own decorative layer above the folder edge, never inside a page */
 :is([data-dm="spread"], [data-dm="single"]) .d-frame-tab {
-  display: flex; align-items: center; position: absolute; top: -1.7rem; height: 1.7rem; padding: 0 1.6rem;
-  background: var(--folder); color: var(--folder-mute); opacity: var(--e); white-space: nowrap; pointer-events: none;
-  font-family: var(--font-geist-mono), monospace; font-size: 0.64rem; letter-spacing: 0.18em; text-transform: uppercase;
+  display: flex; align-items: center; position: absolute; top: -1.9rem; height: 1.9rem; padding: 0 1.7rem;
+  background: var(--vermilion); color: var(--fg); opacity: var(--e); white-space: nowrap; pointer-events: none;
+  font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase;
   clip-path: polygon(0 100%, 7% 0, 93% 0, 100% 100%);
 }
 [data-dm="spread"] .d-frame-tab { right: clamp(1.4rem, 7%, 3.4rem); }
@@ -534,63 +500,92 @@ html:not(.js) [data-drive],
        R / single sheet   rotateY(0 → -180deg)   (phone: 0 → -100deg, it swings out of sight)
        L sheet (desktop)  the BACK of the leaf that turns: rotateY(180deg → 0), the mirror image about
                           the spine, so it lands flat on the left exactly as the leaf's front leaves.
-   --te is the eased turn. [data-turn=rest] drops the transform so resting pages are flat and crisp. */
+   --t is already the eased turn (the engine applies the paper curve). [data-turn=rest] drops the
+   transform so resting pages are flat and crisp. */
+.d-surface { position: relative; }
 :is([data-dm="spread"], [data-dm="single"]) .d-surface {
-  --te: calc(var(--t) * var(--t) * (3 - 2 * var(--t)));
-  --sh: calc(4 * var(--te) * (1 - var(--te)));        /* 0 → 1 → 0 while the sheet is mid-turn */
   position: absolute; inset: 0; transform-origin: calc(var(--bd) * -1) 50%;
   z-index: calc(40 - var(--n, 0));
   -webkit-backface-visibility: hidden; backface-visibility: hidden;
 }
 :is([data-dm="spread"], [data-dm="single"]) .d-surface[data-active="false"] { visibility: hidden; pointer-events: none; }
-:is([data-dm="spread"], [data-dm="single"]) .d-surface[data-turn="moving"] { will-change: transform; }
+:is([data-dm="spread"], [data-dm="single"]) .d-surface[data-turn="moving"] { will-change: transform; pointer-events: none; }
 
+.d-face { position: relative; container: page / inline-size; }
+.d-back { display: none; }
 :is([data-dm="spread"], [data-dm="single"]) .d-face { position: absolute; inset: 0; container: page / size; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+
+/* One sheet = header, body, footer, always stacked in normal flow: nothing can overlap. */
+.d-sheet {
+  --px: clamp(1.1rem, 4.6cqw, 2.2rem); --py: clamp(0.9rem, 3.4cqw, 1.5rem);
+  position: relative; display: flex; flex-direction: column; min-width: 0;
+  background: var(--paper); color: var(--fg); border: 1px solid var(--rule); border-radius: 2px;
+  padding: var(--py) var(--px); font-size: 1rem; line-height: 1.5; overflow-wrap: break-word;
+}
 :is([data-dm="spread"], [data-dm="single"]) .d-sheet {
   position: absolute; inset: 0; border-radius: 2px;
   font-size: calc(var(--fit, 1) * var(--fs)); overflow: hidden;
 }
-:is([data-dm="spread"], [data-dm="single"]) .d-body { flex: 1 1 0; overflow: hidden; }
-:is([data-dm="spread"], [data-dm="single"]) .d-sheet[data-overflow] .d-body { overflow-y: auto; overscroll-behavior: auto; }
-:is([data-dm="spread"], [data-dm="single"]) .d-portrait { flex: 1 1 0; }
-:is([data-dm="spread"], [data-dm="single"]) .d-portrait-image { flex: 1 1 0; height: 0; min-height: 0; aspect-ratio: auto; max-height: none; }
-
-/* light and shadow: the sheet darkens toward its free edge as it lifts, and the page it uncovers is
-   in shade until the sheet has moved away. Opacity only, so it is cheap. */
-:is([data-dm="spread"], [data-dm="single"]) .d-surface::after {
-  content: ""; position: absolute; inset: 0; border-radius: 2px; pointer-events: none;
-  -webkit-backface-visibility: hidden; backface-visibility: hidden;
-  background: linear-gradient(90deg, rgba(40, 28, 10, 0.04), rgba(40, 28, 10, 0.5));
-  opacity: min(1, calc(var(--sh) * 0.55 + (1 - var(--p, 0)) * 0.3));
+.d-runhead, .d-runfoot {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 0.4em 1rem; flex-wrap: wrap;
+  font-family: var(--font-plex-mono), ui-monospace, monospace; color: var(--muted);
 }
-[data-dm="spread"] .d-surface[data-side="l"]::after { background: linear-gradient(270deg, rgba(40, 28, 10, 0.04), rgba(40, 28, 10, 0.5)); }
-.d-surface[data-done="1"][data-turn="rest"]::after { display: none; }
+.d-runhead { flex: none; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; padding-bottom: 0.7rem; border-bottom: 2px solid var(--fg); color: var(--fg); }
+.d-runfoot { flex: none; min-height: 1.6rem; font-size: 0.76rem; line-height: 1.45; border-top: 1px solid var(--rule); padding-top: 0.7rem; }
+.d-runfoot-note { text-align: right; margin-left: auto; max-width: 40em; }
+.d-runfoot a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.d-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 1.1rem 0 1.1rem; }
+:is([data-dm="spread"], [data-dm="single"]) .d-body { flex: 1 1 0; overflow: hidden; }
+:is([data-dm="spread"], [data-dm="single"]) .d-sheet[data-overflow] .d-body { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+.d-stack { display: flex; flex-direction: column; gap: 0.95em; min-width: 0; }
+.d-stack-center { flex: 1 1 auto; justify-content: center; }
+.d-stack-mid { flex: 1 1 auto; justify-content: center; }
+/* light pages: a little more air and larger type so they read as set, not sparse */
+.d-roomy { gap: 1.15em; font-size: 1.08em; }
+.d-head { display: flex; flex-direction: column; gap: 0.75em; }
+.d-edu { display: flex; flex-direction: column; gap: 0.8em; }
+
+/* Two real layers on every sheet. d-dim: the page is dark and unread until its turn to be drawn. d-shade: the light
+   and shadow of the turn (the sheet darkens toward its free edge as it lifts; a passing leaf casts a shadow on
+   the page it covers). Opacity only, so both are cheap. */
+.d-dim, .d-shade { position: absolute; inset: 0; z-index: 6; border-radius: 2px; pointer-events: none; display: none; }
+:is([data-dm="spread"], [data-dm="single"]) :is(.d-dim, .d-shade) { display: block; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.d-dim { background: rgb(var(--ink-warm)); }
+.d-surface[data-rv="hidden"] .d-dim { opacity: 0.58; }
+.d-surface[data-rv="running"] .d-dim { opacity: 0; transition: opacity 0.95s cubic-bezier(0.3, 0.1, 0.2, 1); }
+.d-surface[data-rv="done"] .d-dim { opacity: 0; }
+.d-shade {
+  background: linear-gradient(90deg, rgba(var(--ink-warm), 0.04), rgba(var(--ink-warm), 0.55));
+  opacity: min(1, calc(var(--sh) * 0.55 + var(--cs) * 0.6));
+}
+[data-dm="spread"] .d-surface[data-side="l"] .d-shade { background: linear-gradient(270deg, rgba(var(--ink-warm), 0.04), rgba(var(--ink-warm), 0.55)); }
+.d-surface[data-turn="rest"] .d-shade { display: none; }
+[data-dm="single"] :is(.d-dim, .d-shade) { transform: translateZ(1px); }
 
 /* ---- spread (desktop): a book ------------------------------------------------------------- */
-[data-dm="spread"] .d-surface { transform: rotateY(calc(var(--te) * -180deg)); }
+[data-dm="spread"] .d-surface { transform: rotateY(calc(var(--t) * -180deg)); }
 [data-dm="spread"] .d-surface[data-side="l"] {
   inset: 0 auto 0 calc(var(--pw) * -1); width: 100%; z-index: calc(50 + var(--n, 0));
   transform-origin: calc(var(--pw) - var(--bd)) 50%;
-  transform: rotateY(calc((1 - var(--te) * (1 - var(--lc))) * 180deg));
+  transform: rotateY(calc((1 - var(--t) * (1 - var(--lc))) * 180deg));
 }
 [data-dm="spread"] .d-surface[data-turn="rest"] { transform: none; }
 .d-surface[data-side="l"] .d-rh-b, .d-surface[data-side="r"] .d-rh-a { display: none; }
 .d-surface[data-side="r"] .d-runhead { justify-content: flex-end; }
 [data-dm="spread"] .d-sheet {
-  --fs: clamp(0.84rem, 2.85cqw, 1.1rem);
+  --fs: clamp(0.88rem, 2.9cqw, 1.1rem);
   --px: clamp(1.2rem, 5.6cqw, 2.6rem); --py: clamp(1rem, 3.6cqw, 1.7rem);
 }
 
 /* ---- single (phones, portrait tablets): one page, every half-page is its own sheet ---------- */
-[data-dm="single"] .d-surface { transform-style: preserve-3d; transform: rotateY(calc(var(--te) * -100deg)); }
+[data-dm="single"] .d-surface { transform-style: preserve-3d; transform: rotateY(calc(var(--t) * -100deg)); }
 [data-dm="single"] .d-surface[data-turn="rest"] { transform: none; }
 /* the back of the sheet as it swings away: blank paper, never mirrored text */
 [data-dm="single"] .d-back {
   display: block; position: absolute; inset: 0; border: 1px solid var(--rule); border-radius: 2px;
-  background: linear-gradient(90deg, #e6dfcf, #f1ecdf); transform: rotateY(180deg);
+  background: linear-gradient(90deg, #e3dccb, #efe9db); transform: rotateY(180deg);
   -webkit-backface-visibility: hidden; backface-visibility: hidden;
 }
-[data-dm="single"] .d-surface::after { transform: translateZ(1px); }
 [data-dm="single"] .d-rh-a { display: none; }
 [data-dm="single"] .d-surface[data-side="l"] .d-rh-b { display: inline; }
 [data-dm="single"] .d-surface[data-side="l"] .d-runhead { justify-content: flex-start; }
@@ -602,5 +597,472 @@ html:not(.js) [data-drive],
 [data-dm="single"] .d-runfoot { font-size: 0.66rem; }
 [data-dm="single"] .d-body { padding: 0.85rem 0; }
 
-/* phones: the small cover has no room for the decorative contents strip (it is aria-hidden) */
-[data-dm="single"] .d-cover-contents { display: none; }
+/* header / body / footer sit above the oversized folio numeral */
+.d-runhead, .d-body, .d-runfoot { position: relative; z-index: 1; }
+
+/* bookend sheets (introduction, contact) are printed black: same sheet, different ink, with an ivory margin all round */
+.d-sheet[data-tone="ink"] {
+  --paper: var(--folder); --fg: var(--folder-ink); --muted: var(--folder-mute); --rule: rgba(246, 241, 231, 0.3);
+  --accent: var(--vermilion); --ghost: rgba(246, 241, 231, 0.07);
+  border: clamp(8px, 2.4cqw, 14px) solid var(--ivory);
+}
+.d-sheet[data-tone="ink"] .d-btn { color: var(--folder); }
+
+/* an oversized folio numeral anchors the statement pages, where the type sits low and the top is free
+   (decorative: no alt text). Pages that fill the sheet with text do not get one. */
+:is([data-dm="spread"], [data-dm="single"]) .d-surface[data-side="l"] .d-sheet:is([data-pid="education"], [data-pid="contact"])::before {
+  content: attr(data-act) / ""; position: absolute; z-index: 0; right: var(--px); bottom: 2.6em; pointer-events: none;
+  font-family: var(--font-archivo), "Arial Black", sans-serif; font-size: min(9em, 40cqw); line-height: 0.8; letter-spacing: -0.04em;
+  color: var(--ghost, rgba(var(--ink-warm), 0.07));
+}
+/* an orange thumb-index tab on the outer edge of every right page, one step lower for each act */
+.d-surface[data-side="r"] .d-sheet::after {
+  content: ""; position: absolute; z-index: 2; right: 0; pointer-events: none;
+  top: calc(5.6em + (var(--act, 1) - 1) * 2.5em); width: 0.7em; height: 1.9em; background: var(--vermilion);
+}
+/* left pages that are mostly one statement sit low on the sheet, right pages stay centred */
+.d-surface[data-side="l"] .d-stack-center { justify-content: flex-end; }
+
+/* ---------------------------------------------------------------- type ------------------- */
+/* Display (Archivo Black) for the big statements, DM Sans for everything that is read, IBM Plex Mono for the
+   technical layer. Hierarchy: act heading > display statement > subhead > body > labels and metadata. */
+.d-act {
+  margin: 0; display: flex; flex-direction: column; gap: 0.55em;
+  font-family: var(--font-archivo), "Arial Black", sans-serif; font-weight: 400; text-transform: uppercase;
+  font-size: clamp(1.55em, 8.2cqw, 2.7em); line-height: 0.92; letter-spacing: -0.02em;
+}
+.d-act-no {
+  display: flex; align-items: center; gap: 0.9em; line-height: 1;
+  font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: max(0.75rem, 0.3em);
+  letter-spacing: 0.18em; color: var(--accent);
+}
+.d-act-no::after { content: ""; width: 3.2em; height: 3px; background: var(--vermilion); }
+/* a small act label (used where the name or a statement is the headline of the page) */
+.d-act-sm { font-family: var(--font-dm-sans), system-ui, sans-serif; text-transform: none; font-weight: 700; font-size: 1em; letter-spacing: 0; line-height: 1.2; gap: 0.5em; }
+.d-act-sm .d-act-no { font-size: 0.85em; }
+.d-display {
+  margin: 0; font-family: var(--font-archivo), "Arial Black", sans-serif; font-weight: 400; text-transform: uppercase;
+  font-size: clamp(2em, 13cqw, 4.3em); line-height: 0.88; letter-spacing: -0.03em; overflow-wrap: normal;
+}
+.d-display-md { font-size: clamp(1.35em, 6.4cqw, 2.3em); line-height: 0.96; letter-spacing: -0.02em; }
+.d-title { margin: 0; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 700; font-size: 1.5em; line-height: 1.1; letter-spacing: -0.018em; }
+.d-title-lg { font-size: 1.7em; line-height: 1.04; }
+.d-company { display: block; margin: 0; font-weight: 600; font-size: 1.05em; line-height: 1.25; }
+.d-meta { margin: 0; font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.82em; color: var(--muted); line-height: 1.55; }
+.d-kicker { display: block; margin: 0; font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.8em; letter-spacing: 0.1em; color: var(--accent); line-height: 1.55; }
+.d-caption {
+  display: flex; align-items: center; gap: 0.7em; margin: 0.35em 0 0;
+  font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.8em; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg);
+}
+.d-caption::before { content: ""; flex: none; width: 0.6em; height: 0.6em; background: var(--vermilion); }
+.d-p { margin: 0; line-height: 1.58; }
+.d-lead { margin: 0; font-size: 1.2em; line-height: 1.5; max-width: 30em; font-weight: 500; }
+.d-role { margin: 0; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 500; font-size: 1.1em; color: var(--muted); line-height: 1.4; }
+.d-statement { margin: 0; max-width: 25em; font-family: var(--font-newsreader), Georgia, serif; font-style: italic; font-size: 1.28em; line-height: 1.38; }
+.d-next { display: flex; align-items: center; gap: 0.6em; margin: 0.6em 0 0; font-weight: 600; font-size: 0.9em; color: var(--accent); }
+.d-muted { color: var(--muted); }
+.d-rolenote { margin: 0; font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.82em; line-height: 1.5; border-left: 3px solid var(--fg); padding: 0.15em 0 0.15em 0.8em; color: var(--fg); }
+.d-rolenote-solo { border-left-color: var(--vermilion); color: var(--accent); }
+/* a printed stamp: orange block, ink text */
+.d-stamp { display: inline-block; width: fit-content; margin: 0.8em 0 0; font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.86em; letter-spacing: 0.16em; text-transform: uppercase; color: var(--folder); background: var(--vermilion); border: 2px solid var(--folder); border-radius: 0; padding: 0.6em 1.1em; }
+.d-rule { height: 2px; width: 100%; background: var(--fg); opacity: 1; }
+.d-rule-gap { margin: 0.4em 0; }
+
+.d-bullets { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6em; }
+.d-bullets > li { position: relative; padding-left: 1.4em; line-height: 1.5; }
+.d-bullets > li::before { content: ""; position: absolute; left: 0; top: 0.78em; width: 0.8em; height: 3px; background: var(--vermilion); }
+.d-links { display: flex; flex-wrap: wrap; gap: 0.6em; }
+.d-btn { display: inline-flex; align-items: center; gap: 0.55em; min-height: 2.75rem; padding: 0.55em 1em; font-weight: 700; font-size: 0.9em; letter-spacing: 0.01em; border: 2px solid var(--fg); background: var(--fg); color: var(--paper); border-radius: 2px; transition: background 0.18s, border-color 0.18s, color 0.18s; }
+.d-btn:hover { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.d-btn-ghost { background: transparent; color: var(--fg); }
+.d-btn-ghost:hover { background: var(--fg); border-color: var(--fg); color: var(--paper); }
+.d-btn-live { background: var(--vermilion); border-color: var(--folder); color: var(--folder); }
+.d-btn-live:hover { background: var(--folder); border-color: var(--folder); color: var(--vermilion); }
+
+/* technology chips: a logo and a name each. Logos are 1.05em so they never outweigh the text. */
+.d-tags, .pe-chips { display: flex; flex-wrap: wrap; gap: 0.4em; list-style: none; margin: 0; padding: 0; }
+.d-tag, .pe-chips > li { border: 1px solid var(--rule); background: color-mix(in srgb, var(--paper) 70%, transparent); padding: 0.26em 0.62em 0.26em 0.5em; font-size: 0.84em; line-height: 1.3; }
+.tc { display: inline-flex; align-items: center; gap: 0.5em; }
+.tc-ico { width: 1.1em; height: 1.1em; flex: none; }
+.tc-none { width: 0.38em; height: 0.38em; flex: none; margin: 0 0.36em; background: var(--muted); opacity: 0.55; }
+.tc-name { overflow-wrap: anywhere; }
+
+/* employer / school marks: one square tile, whatever the logo's own shape */
+.d-employer { display: flex; align-items: center; gap: 0.85em; }
+.d-employer-text { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
+.d-mark { position: relative; display: block; flex: none; width: 3.2em; height: 3.2em; overflow: hidden; background: #fff; border: 1px solid var(--rule); }
+.d-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.d-mark-crop { background: #0a1b2c; }
+.d-mark-crop img { height: auto; max-width: none; object-fit: fill; }
+
+/* a small pictogram and the label it carries (no screenshot exists for this work) */
+.d-pictogram { display: flex; align-items: center; gap: 0.8em; }
+.d-pictogram > span { display: flex; flex-direction: column; gap: 0.15em; }
+.d-pictogram-icon { flex: none; width: 4.4em; height: 4.4em; color: var(--fg); }
+.d-pictogram-cap { font-size: 0.86em; color: var(--muted); }
+.wi-accent { fill: var(--vermilion); stroke: var(--vermilion); }
+.wi-check { stroke: var(--folder); }
+.wi-accent-stroke { stroke: var(--accent); }
+.wi-accent-fill { fill: var(--vermilion); stroke: none; }
+
+/* portrait */
+.d-portrait { margin: 0; display: flex; flex-direction: column; justify-content: center; gap: 0.7em; flex: 1 1 auto; min-height: 0; }
+.d-portrait-image { display: block; width: calc(100% - 0.55em); height: auto; aspect-ratio: 1 / 1; object-fit: cover; object-position: 50% 28%; border: 2px solid var(--fg); box-shadow: 0.55em 0.55em 0 var(--vermilion); }
+.d-portrait-caption { display: flex; justify-content: space-between; gap: 1em; width: calc(100% - 0.55em); font-size: 0.86em; color: var(--muted); }
+.d-portrait-caption span:first-child { font-weight: 700; color: var(--fg); }
+:is([data-dm="spread"], [data-dm="single"]) .d-portrait-image { flex: 0 1 auto; max-height: calc(100% - 3em); width: auto; max-width: calc(100% - 0.55em); align-self: flex-start; }
+
+/* education */
+.d-edu-logo { margin: 0; max-width: 22em; }
+.d-edu-logo img { display: block; width: 100%; height: auto; }
+.d-grad { margin: 0; width: min(68%, 18em); }
+.d-grad img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; object-position: 50% 20%; border: 1px solid var(--fg); box-shadow: 0.5em 0.5em 0 var(--vermilion); }
+
+/* archive index (experience overview) */
+.d-index { list-style: none; margin: 0; padding: 0; display: grid; border-top: 2px solid var(--fg); }
+.d-index-row { display: grid; grid-template-columns: 2.7em minmax(0, 1fr); gap: 0.5em; padding: 0.75em 0; border-top: 1px solid var(--rule); }
+.d-index > li:first-child .d-index-row { border-top: 0; }
+.d-index > li:last-child .d-index-row { border-bottom: 1px solid var(--rule); }
+.d-index-no { white-space: nowrap; font-family: var(--font-archivo), "Arial Black", sans-serif; font-size: 1.7em; line-height: 1; color: var(--accent); letter-spacing: -0.03em; }
+.d-index-name { display: block; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 700; font-size: 1.2em; line-height: 1.2; letter-spacing: -0.01em; }
+.d-index-label { display: block; font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.82em; color: var(--muted); margin-top: 0.25em; }
+.d-index-label.is-solo { color: var(--accent); }
+
+/* AI Resume Analyzer: the process as a short vertical flow, step on the left and what happens on the right */
+.d-pipe { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); border-top: 2px solid var(--fg); }
+.d-pipe-node { display: grid; grid-template-columns: 8.8em minmax(0, 1fr); gap: 0.2em 1em; align-items: baseline; padding: 0.85em 0; border-bottom: 1px solid var(--rule); }
+.d-pipe-step { font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.8em; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.d-pipe-label { font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 600; font-size: 1.1em; line-height: 1.25; }
+
+/* skills */
+.d-inv-group { display: block; }
+.d-inv-head { display: flex; align-items: baseline; gap: 0.7em; margin: 0 0 0.4em; padding-bottom: 0.4em; border-bottom: 2px solid var(--fg); font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.8em; letter-spacing: 0.12em; text-transform: uppercase; }
+.d-inv-count { margin-left: auto; color: var(--muted); }
+.d-inv-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 2em; }
+@container page (min-width: 440px) { .d-inv-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.d-inv-list li { display: flex; align-items: center; gap: 0.7em; padding: 0.18em 0; font-size: 0.98em; line-height: 1.35; border-bottom: 1px dotted var(--rule); }
+.d-inv-ico { width: 1.1em; height: 1.1em; flex: none; }
+.d-inv-list .tc-none { width: 0.38em; height: 0.38em; margin: 0 0.36em; }
+
+/* contact */
+.d-contact { list-style: none; margin: 0; padding: 0; max-width: 32em; border-top: 2px solid var(--fg); }
+.d-contact li { border-bottom: 1px solid var(--rule); }
+.d-contact-link { display: flex; align-items: center; gap: 0.9em; min-height: 3rem; padding: 0.8em 0; font-weight: 600; font-size: 1.05em; transition: color 0.2s; }
+.d-contact-link span { overflow-wrap: anywhere; }
+.d-contact-link:hover { color: var(--accent); }
+.d-end { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6em 1.6em; font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.84em; color: var(--muted); line-height: 1.5; }
+.d-backtop { margin-left: auto; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------------------------------------------------------------- evidence ----------------- */
+/* Real screenshots, drawn with a minimal window bar. Sizes come from the image itself: nothing is stretched. */
+.d-fig { margin: 0; display: flex; flex-direction: column; gap: 0.5em; }
+.d-figcap { font-size: 0.8em; color: var(--muted); }
+.d-shot { position: relative; display: block; background: #fff; border: 1px solid var(--fg); box-shadow: 0 0.7em 1.3em -0.9em rgba(var(--ink-warm), 0.6); }
+.d-shot-bar { display: flex; gap: 0.3em; padding: 0.4em 0.6em; background: var(--paper-2); border-bottom: 1px solid var(--rule); }
+.d-shot-bar i { display: block; width: 0.44em; height: 0.44em; border-radius: 50%; background: #cdc4b1; }
+.d-shot-img { display: block; width: 100%; height: auto; }
+.d-tagline { position: absolute; left: 0; bottom: 0; z-index: 2; padding: 0.22em 0.65em; background: var(--folder); color: var(--folder-ink); font-size: 0.74em; line-height: 1.3; }
+
+/* "View image": a compact chip laid over the corner of a screenshot (it takes no room in the layout, so the fit of the
+   page text is unchanged), and the viewer it opens (see ImageViewer.tsx) */
+.d-fig-view, .d-phonefig { position: relative; }
+.d-viewbtn {
+  position: absolute; top: 0.35em; right: 0.35em; z-index: 3; display: inline-flex; align-items: center; justify-content: center; gap: 0.4em;
+  min-height: 1.75rem; padding: 0.15em 0.6em; font-family: inherit; font-weight: 700; font-size: 0.74em; line-height: 1.2; letter-spacing: 0.01em;
+  color: var(--fg); background: var(--paper); border: 1.5px solid var(--fg); border-radius: 2px; cursor: pointer; transition: background 0.18s, color 0.18s;
+}
+.d-viewbtn:hover { background: var(--fg); color: var(--paper); }
+.d-viewbtn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.d-phonefig .d-viewbtn, .d-device-phone .d-viewbtn { top: 0.7em; right: 50%; translate: 50% 0; white-space: nowrap; }
+.d-device-phone .d-viewbtn { font-size: 0.62em; padding: 0.1em 0.4em; min-height: 1.5rem; }
+
+.d-lightbox {
+  position: fixed; inset: 0; z-index: 400; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;
+  padding: max(3.75rem, calc(env(safe-area-inset-top, 0px) + 3.25rem)) max(0.9rem, env(safe-area-inset-right, 0px)) max(0.9rem, env(safe-area-inset-bottom, 0px)) max(0.9rem, env(safe-area-inset-left, 0px));
+  background: rgba(15, 14, 13, 0.94); color: var(--folder-ink); overscroll-behavior: contain; font-family: var(--font-dm-sans), system-ui, sans-serif;
+  animation: d-lb-in 0.2s ease-out backwards;
+}
+@keyframes d-lb-in { from { opacity: 0; } }
+.d-lightbox-fig { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 0.6rem; min-height: 0; }
+.d-lightbox-img {
+  display: block; width: auto; height: auto; max-width: min(96vw, 1400px); max-height: calc(100vh - 8.5rem); max-height: calc(100dvh - 8.5rem);
+  object-fit: contain; background: #fff; border: 1px solid rgba(246, 241, 231, 0.35); box-shadow: 0 1.2rem 3rem -1rem rgba(0, 0, 0, 0.8);
+}
+.d-lightbox-cap { margin: 0; font-size: 0.9rem; text-align: center; color: var(--folder-mute); }
+.d-lightbox-close {
+  position: absolute; top: max(0.75rem, env(safe-area-inset-top, 0px)); right: max(0.75rem, env(safe-area-inset-right, 0px));
+  display: inline-flex; align-items: center; gap: 0.5em; min-height: 2.75rem; padding: 0 1rem; font-family: inherit; font-weight: 700; font-size: 0.9rem;
+  color: var(--folder); background: var(--vermilion); border: 2px solid var(--folder-ink); border-radius: 2px; cursor: pointer; transition: background 0.18s, color 0.18s;
+}
+.d-lightbox-close:hover { background: var(--folder-ink); }
+.d-lightbox-close:focus-visible { outline: 3px solid var(--folder-ink); outline-offset: 3px; }
+
+/* the quiet note: one style for confidentiality, status and scope */
+.d-note { margin: 0; border-left: 3px solid var(--fg); padding: 0.1em 0 0.1em 0.85em; font-size: 0.84em; line-height: 1.5; }
+.d-note-label { display: flex; align-items: center; gap: 0.5em; margin: 0 0 0.25em; font-weight: 700; color: var(--accent); }
+.d-note-text { margin: 0; color: var(--muted); }
+.d-relation strong { font-weight: 700; }
+.d-relation { display: flex; align-items: center; gap: 0.5em; width: fit-content; max-width: 100%; margin: 0; padding: 0.3em 0.7em; border: 1px solid var(--accent); color: var(--accent); font-size: 0.8em; font-weight: 600; line-height: 1.35; }
+
+/* one website, two views: the second screen lies over the corner of the first */
+.d-site { margin: 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); padding-bottom: 0.4em; }
+.d-site-main { position: relative; display: block; grid-column: 1 / 10; grid-row: 1; }
+.d-site-second { position: relative; z-index: 2; display: block; grid-column: 5 / 13; grid-row: 2; margin-top: -9%; }
+.d-site-second .d-shot { box-shadow: 0 1em 1.6em -0.8em rgba(var(--ink-warm), 0.7); }
+/* one application, two screens (plain edition and project pages): the phone stands over the lower-right corner of the web view */
+.d-device { position: relative; margin: 0; padding-bottom: 22%; }
+.d-device-web { position: relative; display: block; }
+.d-device-phone { position: absolute; z-index: 2; right: 2%; bottom: 0; width: 25%; display: block; }
+.d-phone { display: block; padding: 0.28em; background: var(--folder); border-radius: 1.1em; box-shadow: 0 1em 1.6em -0.8em rgba(var(--ink-warm), 0.75); }
+.d-phone-img { display: block; width: 100%; height: auto; border-radius: 0.85em; }
+.d-device-phone .d-tagline { left: 0.28em; bottom: 0.28em; border-radius: 0 0.6em 0 0.85em; }
+/* the phone on its own page (folder): phone beside a short note */
+.d-phonefig { margin: 0; display: flex; flex-direction: column; gap: 0.5em; }
+.d-phonerow { display: grid; grid-template-columns: minmax(0, 11.5em) minmax(0, 1fr); gap: 1.4em; align-items: start; }
+.d-phonerow-note { padding-top: 0.4em; }
+
+/* ---------------------------------------------------------------- REVEAL ------------------- */
+/* Every .write block is drawn only while its sheet is data-rv="running", which the engine sets after the page
+   turn has finished and settled (never during it). Order: left sheet top to bottom, then right sheet.
+     block    a soft diagonal wipe from the top-left corner to the right and down, with a fade. Nothing moves.
+     words    short headings: the words fade in one after the other.
+     stagger  lists (tags, steps, rows): items fade in left to right with a tiny shift.
+     rule     a hairline drawn from the left.
+   --dl / --du (delay, duration) come from sequence.ts. Hidden sheets keep their layout (opacity and clip only), so
+   nothing shifts. A sheet that is done, or any page where the engine is not running, is simply visible. */
+.write { --w: 1; }
+.write-words .wd { display: inline-block; }
+html[data-engine] .d-surface:not([data-rv="done"]) :is(.write-block, .write-stamp) {
+  clip-path: polygon(
+    -1em -1em,
+    calc(-1em + (100% + 7em) * var(--w)) -1em,
+    calc(-1em + (100% + 7em) * var(--w) - 5em) calc(100% + 1em),
+    -1em calc(100% + 1em)
+  );
+}
+/* hidden: laid out, not visible */
+html[data-engine] .d-surface[data-rv="hidden"] :is(.write-block, .write-stamp) { --w: 0; opacity: 0; transition: none; }
+html[data-engine] .d-surface[data-rv="hidden"] .write-rule { --w: 0; transition: none; }
+html[data-engine] .d-surface[data-rv="hidden"] .write-words .wd { opacity: 0; transition: none; }
+html[data-engine] .d-surface[data-rv="hidden"] .write-stagger > * { opacity: 0; transform: translate3d(-0.5em, 0, 0); transition: none; }
+/* running: drawn in order */
+html[data-engine] .d-surface[data-rv="running"] :is(.write-block, .write-stamp) {
+  --w: 1; opacity: 1;
+  transition: --w var(--du, 700ms) cubic-bezier(0.4, 0.05, 0.2, 1) var(--dl, 0ms), opacity calc(var(--du, 700ms) * 0.75) ease-out var(--dl, 0ms);
+}
+html[data-engine] .d-surface[data-rv="running"] .write-rule { --w: 1; transition: --w var(--du, 700ms) cubic-bezier(0.4, 0.05, 0.2, 1) var(--dl, 0ms); }
+html[data-engine] .d-surface[data-rv="running"] .write-words .wd { opacity: 1; transition: opacity 0.6s ease calc(var(--dl, 0ms) + var(--n, 0) * 110ms); }
+html[data-engine] .d-surface[data-rv="running"] .write-stagger > * {
+  opacity: 1; transform: none;
+  transition: opacity 0.55s ease calc(var(--dl, 0ms) + var(--n, 0) * 70ms), transform 0.55s ease calc(var(--dl, 0ms) + var(--n, 0) * 70ms);
+}
+.write-rule { transform-origin: left; transform: scaleX(var(--w)); }
+.write-stamp { rotate: -1.5deg; transform-origin: left center; }
+
+/* Variety by kind of content. Text keeps the diagonal wipe above. The three kinds below use the same hidden / running /
+   done switch, the same --dl / --du (so the order and the time a page needs are unchanged) and move nothing that takes
+   part in layout (clip, opacity, scale and translate only). A sheet that is done is simply visible.
+     image    a photograph or screenshot is uncovered from the top downward while it settles from 99% to 100%
+     bullet   a list item fades in from a little to the left of its place
+     chips    skills and technologies settle up by a fraction of a line (they keep the stagger of .write-stagger) */
+html[data-engine] .d-surface:not([data-rv="done"]) .write-image {
+  clip-path: inset(-1em -1em calc(-1em + (1 - var(--w)) * (100% + 2em)) -1em);
+  transform-origin: 50% 0;
+}
+html[data-engine] .d-surface[data-rv="hidden"] .write-image { --w: 0; opacity: 0; scale: 0.99; transition: none; }
+html[data-engine] .d-surface[data-rv="running"] .write-image {
+  --w: 1; opacity: 1; scale: 1;
+  transition: --w var(--du, 700ms) cubic-bezier(0.3, 0.05, 0.2, 1) var(--dl, 0ms), opacity calc(var(--du, 700ms) * 0.5) ease-out var(--dl, 0ms), scale calc(var(--du, 700ms) * 1.1) cubic-bezier(0.2, 0.7, 0.2, 1) var(--dl, 0ms);
+}
+html[data-engine] .d-surface[data-rv="hidden"] .write-bullet { opacity: 0; translate: -0.6em 0; transition: none; }
+html[data-engine] .d-surface[data-rv="running"] .write-bullet {
+  opacity: 1; translate: 0 0;
+  transition: opacity calc(var(--du, 700ms) * 0.7) ease-out var(--dl, 0ms), translate calc(var(--du, 700ms) * 0.8) cubic-bezier(0.2, 0.7, 0.2, 1) var(--dl, 0ms);
+}
+html[data-engine] .d-surface[data-rv="hidden"] .write-chips > * { transform: translate3d(0, 0.4em, 0); }
+html[data-engine] .d-surface[data-rv="running"] .write-chips > * {
+  transition: opacity 0.5s ease calc(var(--dl, 0ms) + var(--n, 0) * 70ms), transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) calc(var(--dl, 0ms) + var(--n, 0) * 70ms);
+}
+
+/* ==========================================================================================
+   PAGE CONTROLS: previous / next / current page. Only exists once the folder has been opened.
+   Previous is a quiet outlined button, next is the solid orange one, so they are never confused.
+   ========================================================================================== */
+.d-dock {
+  position: fixed; z-index: 70; left: 50%; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  display: flex; align-items: stretch; color: var(--folder-ink); background: var(--folder); border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(246, 241, 231, 0.18), 0 10px 24px -10px rgba(var(--ink-warm), 0.7); animation: d-rise 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+@keyframes d-rise { from { opacity: 0; translate: 0 10px; } }
+.d-dock[hidden] { display: none; }
+.d-dock-btn {
+  display: grid; place-items: center; width: 3rem; height: 3rem; color: inherit; background: transparent; border: 0; cursor: pointer;
+  transition: background-color 0.18s, color 0.18s, opacity 0.18s;
+}
+.d-dock-next { background: var(--vermilion); color: var(--folder); border-radius: 0 2px 2px 0; }
+.d-dock-prev:hover:not(:disabled) { background: rgba(246, 241, 231, 0.14); }
+.d-dock-next:hover:not(:disabled) { background: var(--folder-ink); }
+.d-dock-btn:disabled { opacity: 0.32; cursor: not-allowed; }
+.d-dock-next:disabled { background: rgba(246, 241, 231, 0.2); color: var(--folder-ink); }
+.d-dock :focus-visible { outline: 3px solid var(--folder-ink); outline-offset: -6px; border-radius: 0; }
+.d-dock-next:focus-visible { outline-color: var(--folder); }
+.d-dock-read {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem; padding: 0 0.75rem;
+  border-inline: 1px solid rgba(246, 241, 231, 0.2);
+}
+.d-dock[data-busy="1"] .d-dock-read { opacity: 0.8; }
+.d-dock-now { margin: 0; white-space: nowrap; font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.76rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.d-dock-title { display: none; }
+@media (min-width: 560px) { .d-dock-title { display: inline; margin-left: 0.5em; color: var(--folder-mute); } .d-dock-read { padding: 0 1.1rem; } }
+.d-ticks { display: flex; gap: 2px; }
+.d-ticks i { display: block; width: 4px; height: 3px; background: rgba(246, 241, 231, 0.3); transition: background-color 0.2s, width 0.2s; }
+.d-ticks i[data-on="p"] { background: var(--folder-ink); }
+.d-ticks i[data-on="1"] { background: var(--vermilion); width: 10px; }
+
+/* ==========================================================================================
+   SCROLL HINTS: two quiet "this scrolls" marks just outside the open folder's left and right edges.
+   They are placed from the folder's own geometry (--pw, --dy) and take only the gutter that exists, so they
+   can never overlap the pages or the controls, nor overflow a phone. The engine shows them (data-hint) only
+   while the folder is open and at rest; they fade once pages are being turned and return after a pause.
+   ========================================================================================== */
+.d-hints { display: none; }
+:is([data-dm="spread"], [data-dm="single"]) .d-hints { display: block; }
+[data-dm="spread"] .d-hint { --span: 2; }
+[data-dm="single"] .d-hint { --span: 1; }
+.d-hint {
+  --gut: calc((100vw - var(--pw) * var(--span)) / 2);                    /* free room beside the open folder */
+  --off: clamp(2px, calc(var(--gut) * 0.25 - 2px), 18px);                /* breathing space from its edge */
+  position: fixed; z-index: 40; top: calc(50% + var(--dy)); translate: 0 -50%;
+  width: clamp(0px, calc(var(--gut) - var(--off) - 2px), 22px); overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; gap: 7px; color: var(--muted);
+  opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
+}
+.d-hint-l { right: calc(50% + var(--pw) * var(--span) / 2 + var(--off)); }
+.d-hint-r { left: calc(50% + var(--pw) * var(--span) / 2 + var(--off)); }
+.d-root[data-hint="1"] .d-hint { opacity: 0.7; transition: opacity 0.7s ease 0.15s; }
+.d-hint svg { display: block; width: 100%; max-width: 18px; height: auto; aspect-ratio: 1; filter: drop-shadow(0 0 1.5px var(--paper)); } /* legible over the folder's dark edge too */
+.d-hint-rail { display: block; width: 1px; height: clamp(26px, 6vh, 52px); background: currentColor; opacity: 0.55; box-shadow: 0 0 1.5px var(--paper); }
+/* the nudge only runs while the hints are on show: nothing here animates while the folder tilts, opens or closes */
+.d-root[data-hint="1"] .d-hint-up { animation: d-hint-up 2.4s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+.d-root[data-hint="1"] .d-hint-down { animation: d-hint-down 2.4s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+@keyframes d-hint-up { 0%, 100% { transform: translateY(2px); opacity: 0.45; } 50% { transform: translateY(-2px); opacity: 1; } }
+@keyframes d-hint-down { 0%, 100% { transform: translateY(-2px); opacity: 0.45; } 50% { transform: translateY(2px); opacity: 1; } }
+
+/* ==========================================================================================
+   THE PLAIN EDITION (.pe): the same portfolio as a quiet editorial publication.
+   One normal page, ordinary scrolling, no animation. Black masthead and footer, ivory page, one orange accent.
+   Headlines in Archivo Black, text in Newsreader (serif, comfortable for minutes of reading), labels in DM Sans.
+   ========================================================================================== */
+.pe { --pe-w: 72rem; --pe-gut: clamp(1.1rem, 4vw, 2.75rem); color: var(--fg); font-family: var(--font-newsreader), Georgia, serif; font-size: 1.125rem; line-height: 1.65; }
+.pe a { text-underline-offset: 3px; }
+
+/* masthead: compact, sticky, always one tap from every section and from the folder */
+.pe-mast { position: sticky; top: 0; z-index: 50; background: var(--folder); color: var(--folder-ink); border-bottom: 3px solid var(--vermilion); }
+.pe-mast-in { max-width: var(--pe-w); margin: 0 auto; padding: 0.55rem var(--pe-gut); display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 1.5rem; }
+.pe-brand { display: flex; align-items: baseline; gap: 0.75rem; min-height: 2.75rem; align-items: center; color: inherit; text-decoration: none; margin-right: auto; }
+.pe-brand-name { font-family: var(--font-archivo), "Arial Black", sans-serif; font-size: 1.15rem; letter-spacing: -0.01em; text-transform: uppercase; }
+.pe-brand-role { display: none; font-family: var(--font-dm-sans), system-ui, sans-serif; font-size: 0.85rem; color: var(--folder-mute); }
+@media (min-width: 720px) { .pe-brand-role { display: inline; } }
+.pe-nav { order: 3; width: 100%; overflow-x: auto; margin: 0 calc(var(--pe-gut) * -1); padding: 0 var(--pe-gut); scrollbar-width: none; }
+.pe-nav::-webkit-scrollbar { display: none; }
+.pe-nav ul { display: flex; gap: 0.25rem; list-style: none; margin: 0; padding: 0; width: max-content; }
+.pe-nav a { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 0.7rem; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 600; font-size: 0.9rem; color: var(--folder-mute); text-decoration: none; border-bottom: 2px solid transparent; }
+.pe-nav a:hover { color: var(--folder-ink); border-bottom-color: var(--vermilion); }
+@media (min-width: 900px) { .pe-nav { order: 0; width: auto; margin: 0; padding: 0; overflow: visible; } }
+
+.pe-page { max-width: var(--pe-w); margin: 0 auto; padding: 0 var(--pe-gut) 5rem; }
+
+/* introduction feature */
+.pe-feature { display: grid; gap: 2.25rem; padding: clamp(2.5rem, 7vw, 5rem) 0 clamp(2.5rem, 6vw, 4.5rem); }
+@media (min-width: 900px) { .pe-feature { grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: 4rem; align-items: end; } }
+.pe-kicker { margin: 0 0 1.1rem; display: flex; align-items: center; gap: 0.8rem; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 700; font-size: 0.9rem; letter-spacing: 0.02em; color: var(--accent); }
+.pe-kicker::before { content: ""; width: 2.6rem; height: 4px; background: var(--vermilion); }
+.pe-name { margin: 0; font-family: var(--font-archivo), "Arial Black", sans-serif; font-weight: 400; text-transform: uppercase; font-size: clamp(3.1rem, 10.5vw, 7.4rem); line-height: 0.88; letter-spacing: -0.035em; }
+.pe-tagline { margin: 1.4rem 0 0; display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 700; font-size: clamp(1.15rem, 2.4vw, 1.5rem); letter-spacing: -0.01em; }
+.pe-tagline span { font-weight: 500; color: var(--muted); }
+.pe-lede { margin: 1.6rem 0 0; max-width: 31rem; font-size: clamp(1.3rem, 2.4vw, 1.65rem); line-height: 1.38; font-style: italic; }
+.pe-elsewhere { margin: 1.8rem 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 600; font-size: 0.95rem; }
+.pe-elsewhere a { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; color: var(--fg); }
+.pe-elsewhere a:hover { color: var(--accent); }
+.pe-portrait { margin: 0; max-width: 26rem; }
+.pe-portrait img { display: block; width: calc(100% - 0.7rem); height: auto; aspect-ratio: 1 / 1; object-fit: cover; object-position: 50% 28%; border: 2px solid var(--fg); box-shadow: 0.7rem 0.7rem 0 var(--vermilion); }
+.pe-portrait figcaption { margin-top: 1rem; font-family: var(--font-dm-sans), system-ui, sans-serif; font-size: 0.88rem; color: var(--muted); }
+
+/* sections */
+.pe-section { padding-top: 1.1rem; margin-top: clamp(3rem, 7vw, 5rem); border-top: 4px solid var(--fg); scroll-margin-top: 5.5rem; }
+.pe-head { display: grid; gap: 0.7rem; margin-bottom: 2.2rem; }
+@media (min-width: 900px) { .pe-head { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: end; gap: 3rem; } }
+.pe-h2 { margin: 0; font-family: var(--font-archivo), "Arial Black", sans-serif; font-weight: 400; text-transform: uppercase; font-size: clamp(2rem, 5vw, 3.4rem); line-height: 0.95; letter-spacing: -0.025em; }
+.pe-dek { margin: 0; font-family: var(--font-dm-sans), system-ui, sans-serif; font-size: 0.92rem; line-height: 1.5; color: var(--muted); max-width: 30rem; }
+.pe-h3 { margin: 0; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 700; font-size: 1.35rem; line-height: 1.2; letter-spacing: -0.015em; }
+.pe-h3-lg { font-size: clamp(1.7rem, 3.4vw, 2.3rem); line-height: 1.08; letter-spacing: -0.025em; }
+.pe-h4 { margin: 0; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 700; font-size: clamp(1.45rem, 3vw, 1.9rem); line-height: 1.1; letter-spacing: -0.02em; }
+.pe-h5 { margin: 1.6rem 0 0.5rem; display: flex; align-items: center; gap: 0.6rem; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.01em; }
+.pe-h5::before { content: ""; width: 0.6rem; height: 0.6rem; background: var(--vermilion); flex: none; }
+.pe-role { margin: 0.15rem 0 0; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 500; font-size: 1.05rem; }
+.pe-meta { margin: 0.2rem 0 0; font-family: var(--font-dm-sans), system-ui, sans-serif; font-size: 0.92rem; color: var(--muted); }
+.pe-lead { margin: 1rem 0 0; max-width: 42rem; font-size: 1.3rem; line-height: 1.45; }
+.pe-p { margin: 0.9rem 0 0; max-width: 40rem; }
+.pe-muted { color: var(--muted); }
+.pe-label { margin: 0.7rem 0 0; width: fit-content; max-width: 100%; padding: 0.1rem 0 0.1rem 0.8rem; border-left: 3px solid var(--fg); font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 600; font-size: 0.92rem; line-height: 1.45; }
+.pe-label.is-solo { border-left-color: var(--vermilion); color: var(--accent); }
+h3 + .pe-label, .pe-entry-text > .pe-label:first-child { margin-top: 0; }
+.pe-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.5rem; max-width: 40rem; }
+.pe-list li { position: relative; padding-left: 1.4rem; }
+.pe-list li::before { content: ""; position: absolute; left: 0; top: 0.8em; width: 0.8rem; height: 3px; background: var(--vermilion); }
+.pe-chips { margin-top: 1.4rem; font-family: var(--font-dm-sans), system-ui, sans-serif; font-size: 1rem; }
+.pe-chips > li { font-size: 0.9rem; }
+
+/* employers and their entries */
+.pe-job { padding-top: 0.5rem; }
+.pe-job + .pe-job { margin-top: 4.5rem; padding-top: 1.1rem; border-top: 1px solid var(--rule); }
+.pe-employer { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.6rem; }
+.pe-mark { width: 3.6rem; height: 3.6rem; font-size: 1rem; }
+.pe-entry { display: grid; gap: 1.8rem; padding: 2.6rem 0; border-top: 1px solid var(--rule); }
+.pe-job > .pe-meta + .pe-entry, .pe-job > .pe-lead + .pe-entry { margin-top: 1.6rem; }
+@media (min-width: 960px) {
+  .pe-entry { grid-template-columns: minmax(0, 1fr) minmax(0, 27rem); gap: 3.5rem; }
+  .pe-entry-media { position: sticky; top: 6rem; align-self: start; }
+}
+.pe-entry-media { display: grid; gap: 1.1rem; font-family: var(--font-dm-sans), system-ui, sans-serif; font-size: 1rem; }
+.pe-icon { width: 4.2rem; height: 4.2rem; margin-bottom: 0.9rem; color: var(--fg); }
+.pe-icon-svg { width: 100%; height: 100%; }
+.pe-also { margin-top: 1rem; padding: 1.4rem 0 0; border-top: 1px solid var(--rule); }
+.pe-also .pe-h5 { margin-top: 0; }
+.pe-links { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.5rem; font-family: var(--font-dm-sans), system-ui, sans-serif; }
+.pe-link { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 2.75rem; padding: 0.5rem 1rem; border: 2px solid var(--fg); font-weight: 700; font-size: 0.92rem; color: var(--fg); text-decoration: none; transition: background-color 0.18s, color 0.18s; }
+.pe-link:hover { background: var(--fg); color: var(--paper); }
+.pe-link-strong { background: var(--vermilion); border-color: var(--folder); color: var(--folder); }
+.pe-link-strong:hover { background: var(--folder); color: var(--vermilion); }
+
+/* education */
+.pe-edu { display: grid; gap: 2rem; }
+@media (min-width: 900px) { .pe-edu { grid-template-columns: minmax(0, 1fr) 20rem; gap: 4rem; align-items: start; } }
+.pe-edu-logo { display: block; width: 100%; max-width: 22rem; height: auto; margin-bottom: 1.6rem; }
+.pe-honors { margin: 1.2rem 0 0; width: fit-content; padding: 0.45rem 1rem; background: var(--vermilion); border: 2px solid var(--folder); color: var(--folder); font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 700; font-size: 0.9rem; }
+.pe-grad { margin: 0; max-width: 20rem; }
+.pe-grad img { display: block; width: calc(100% - 0.6rem); height: auto; aspect-ratio: 4 / 5; object-fit: cover; object-position: 50% 20%; border: 1px solid var(--fg); box-shadow: 0.6rem 0.6rem 0 var(--vermilion); }
+
+/* skills */
+.pe-skills { display: grid; gap: 1.8rem 2.5rem; }
+@media (min-width: 720px) { .pe-skills { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1000px) { .pe-skills { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.pe-skill-group .pe-h5 { margin-top: 0; padding-bottom: 0.55rem; border-bottom: 1px solid var(--fg); }
+.pe-skill-group .pe-chips { margin-top: 0.9rem; }
+
+/* footer */
+.pe-foot { background: var(--folder); color: var(--folder-ink); border-top: 4px solid var(--vermilion); font-family: var(--font-dm-sans), system-ui, sans-serif; }
+.pe-foot-in { max-width: var(--pe-w); margin: 0 auto; padding: 3.2rem var(--pe-gut) 2rem; display: grid; gap: 2rem; }
+@media (min-width: 900px) { .pe-foot-in { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4rem; } }
+.pe-foot-title { margin: 0 0 0.8rem; font-family: var(--font-archivo), "Arial Black", sans-serif; font-weight: 400; text-transform: uppercase; font-size: clamp(2rem, 5vw, 3rem); line-height: 0.95; letter-spacing: -0.02em; }
+.pe-foot-text { margin: 0; max-width: 30rem; font-family: var(--font-newsreader), Georgia, serif; font-size: 1.2rem; line-height: 1.5; color: var(--folder-mute); }
+.pe-foot-links { margin: 0; padding: 0; list-style: none; border-top: 1px solid rgba(246, 241, 231, 0.3); }
+.pe-foot-links li { border-bottom: 1px solid rgba(246, 241, 231, 0.3); }
+.pe-foot-links a { display: flex; align-items: center; gap: 0.85rem; min-height: 3.2rem; font-weight: 600; font-size: 1.02rem; color: var(--folder-ink); text-decoration: none; overflow-wrap: anywhere; }
+.pe-foot-links a:hover { color: var(--vermilion); }
+.pe-foot-end { max-width: var(--pe-w); margin: 0 auto; padding: 0 var(--pe-gut) 2.2rem; display: flex; flex-wrap: wrap; gap: 0.6rem 1.6rem; font-size: 0.85rem; color: var(--folder-mute); }
+.pe-foot-end a { margin-left: auto; color: var(--folder-ink); display: inline-flex; align-items: center; min-height: 2.75rem; }
+.pe a:focus-visible { border-radius: 2px; }
+
+/* without JavaScript the view switch cannot work, so it is not offered */
+html:not(.js) .pe-switch { display: none; }

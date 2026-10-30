@@ -44,11 +44,12 @@ export default function Page({
       data-side={side}
       data-page={index}
       data-active="false"
+      data-rv="done"
       style={{ "--n": index * 2 + (side === "l" ? 0 : 1) } as CSSProperties}
       aria-label={`${label}, ${side === "l" ? "left" : "right"} half`}
     >
       <div className="d-face">
-        <div className="d-sheet">
+        <div className="d-sheet" data-pid={id} data-folio={folio} data-act={act.no} data-tone={side === "l" && (id === "intro" || id === "contact") ? "ink" : undefined} style={{ "--act": Number(act.no) } as CSSProperties}>
           <div className="d-runhead" aria-hidden="true">
             <span className="d-rh-a">{site.name} · Portfolio dossier</span>
             <span className="d-rh-b">
@@ -67,6 +68,8 @@ export default function Page({
           </div>
         </div>
       </div>
+      <span className="d-dim" aria-hidden="true" />
+      <span className="d-shade" aria-hidden="true" />
       <div className="d-back" aria-hidden="true" />
     </section>
   );

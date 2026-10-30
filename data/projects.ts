@@ -1,3 +1,5 @@
+import type { Figure, Note } from "./media";
+
 export type Project = {
   slug: string;
   title: string;
@@ -15,6 +17,12 @@ export type Project = {
   // Optional, used by the dossier view only. Both are restatements of facts already in this file.
   pipeline?: { step: string; label: string }[];
   testing?: string[];
+  /** Real screenshots, in the order they should be shown. */
+  figures?: Figure[];
+  /** Quiet notes about where the project stands or who it was built for. */
+  notes?: Note[];
+  /** Public links other than the source code. */
+  links?: { href: string; label: string; hint: string }[];
 };
 
 export const projects: Project[] = [
@@ -38,6 +46,29 @@ export const projects: Project[] = [
     ],
     role: ["Personally built the project."],
     repo: "https://github.com/troytenapasiwen/ai-resume-analyzer",
+    figures: [
+      {
+        src: "/images/AI RESUME.png",
+        alt: "AI Resume Analyzer interface: an uploaded resume summary on the left and a question-and-answer panel on the right.",
+        width: 2880,
+        height: 1634,
+        caption: "Interface preview",
+      },
+    ],
+    notes: [
+      {
+        tone: "status",
+        label: "Ongoing project",
+        text: "The public Streamlit link previews the interface only. Resume analysis needs the AI backend, which currently runs locally, so it is not available in the public demo.",
+      },
+    ],
+    links: [
+      {
+        href: "https://ai-resume-analyzer-prototype.streamlit.app",
+        label: "Open the interface preview",
+        hint: "Streamlit, interface only",
+      },
+    ],
     pipeline: [
       { step: "Input", label: "Resume and job description" },
       { step: "Analysis", label: "Llama 3.2 via Ollama, hosted locally" },
@@ -61,6 +92,34 @@ export const projects: Project[] = [
       "Contributed to development.",
       "Conducted functional, integration, performance, accessibility, compatibility, and security testing.",
     ],
+    figures: [
+      {
+        src: "/images/REINA.png",
+        alt: "REINA Pabili Services web app: the log-in screen with a promotional panel on the left and a welcome-back form on the right.",
+        width: 2880,
+        height: 1634,
+        caption: "Web view",
+      },
+      {
+        src: "/images/REINA.jpg",
+        alt: "REINA Pabili Services mobile app: the dashboard listing restaurants with ratings, delivery times and prices.",
+        width: 828,
+        height: 1703,
+        caption: "Mobile view",
+      },
+    ],
+    notes: [
+      {
+        tone: "scope",
+        label: "Service area",
+        text: "Designed exclusively for Real, Infanta, and General Nakar, Quezon, Philippines.",
+      },
+      {
+        tone: "status",
+        label: "Project status",
+        text: "Built as an academic capstone. Some third-party services (payments, Google Maps, email delivery and hosting) were not maintained after the project, so some functionality is no longer operational. The frontend and backend were redeployed on Vercel and Render for portfolio demonstration.",
+      },
+    ],
     testing: [
       "Functional",
       "Integration",
@@ -68,6 +127,13 @@ export const projects: Project[] = [
       "Accessibility",
       "Compatibility",
       "Security",
+    ],
+    links: [
+      {
+        href: "https://reina-pabili-services.vercel.app",
+        label: "Open project",
+        hint: "Vercel portfolio demo, some services no longer operational",
+      },
     ],
   },
 ];

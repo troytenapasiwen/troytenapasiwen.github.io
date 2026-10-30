@@ -1,3 +1,5 @@
+import type { Figure, Logo, Note } from "./media";
+
 export type System = {
   name: string;
   label: string; // states exactly what my role was
@@ -5,11 +7,19 @@ export type System = {
   impact?: string;
   contribution: string[];
   skills: string[];
+  /** Real screenshots (login screens only for company systems) and the notes that go with them. */
+  evidence?: {
+    figures: Figure[];
+    note?: Note;
+    /** A short relationship label, shown as a small "connected" marker. */
+    relation?: string;
+  };
 };
 
 export type ExperienceEntry = {
   role: string;
   company: string;
+  logo?: Logo;
   period: string;
   note?: string;
   summary?: string;
@@ -17,6 +27,13 @@ export type ExperienceEntry = {
   generalTitle?: string;
   general?: string[];
 };
+
+/** The same quiet wording on every internal company system, so the notes read as one family. */
+const internalNote = (extra: string): Note => ({
+  tone: "internal",
+  label: "Internal company system",
+  text: `An internal company system developed during my internship. Only the login screen is shown as a portfolio demonstration. ${extra}`,
+});
 
 export const confidentialityNote =
   "Specific implementation details of company systems are not publicly disclosed due to confidentiality.";
@@ -34,6 +51,7 @@ export const experience: ExperienceEntry[] = [
   {
     role: "Software Developer Intern",
     company: "Inter-World Shipping Corporation",
+    logo: { src: "/images/inter-world.jpeg", alt: "Inter-World Shipping Corporation logo", width: 447, height: 447 },
     period: "Nov 2025 – May 2026",
     note: "800 hours",
     summary:
@@ -54,6 +72,18 @@ export const experience: ExperienceEntry[] = [
           "Contributed to improvements and refinements based on feedback during development.",
         ],
         skills: webStack,
+        evidence: {
+          figures: [
+            {
+              src: "/images/ims.png",
+              alt: "Login screen of the Inventory Management System: the company logo above an email and password form, over a blurred photograph of ships.",
+              width: 2880,
+              height: 1634,
+              caption: "Inventory Management System, login screen",
+            },
+          ],
+          note: internalNote("The system and its internal access links cannot be shared publicly."),
+        },
       },
       {
         name: "Crewing Management System",
@@ -70,6 +100,19 @@ export const experience: ExperienceEntry[] = [
           "Contributed to improvements and refinements based on feedback from company personnel during development.",
         ],
         skills: webStack,
+        evidence: {
+          figures: [
+            {
+              src: "/images/cms.jpeg",
+              alt: "Login screen of the Crewing Management System: the company logo above an email and password form, over a blurred photograph of ships.",
+              width: 1024,
+              height: 580,
+              caption: "Crewing Management System, login screen",
+            },
+          ],
+          note: internalNote("The application cannot be shared publicly."),
+          relation: "Connected internal system: interconnected with the Inventory Management System",
+        },
       },
       {
         name: "Automated Forms Portal",
@@ -87,6 +130,22 @@ export const experience: ExperienceEntry[] = [
           "Refined the portal based on feedback from intended users.",
         ],
         skills: webStack,
+        evidence: {
+          figures: [
+            {
+              src: "/images/FORMS PORTAL.png",
+              alt: "Sign-in screen of the ISC Forms Portal on a dark navy background, with an email and password form beside the company logo.",
+              width: 2880,
+              height: 1634,
+              caption: "Automated Forms Portal, sign-in screen",
+            },
+          ],
+          note: {
+            tone: "internal",
+            label: "Separate internal system",
+            text: "An HR system for Human Resources and the relevant employees or approvers. It is not another screen of the Inventory or Crewing Management systems. Only the sign-in screen is shown; the application cannot be shared publicly.",
+          },
+        },
       },
     ],
     generalTitle: "Also in this role",
@@ -101,6 +160,14 @@ export const experience: ExperienceEntry[] = [
   {
     role: "IT & Digital Marketing Intern",
     company: "SEAker System Technologies Incorporated",
+    logo: {
+      src: "/images/seaker.png",
+      alt: "SEAker System Technologies logo",
+      width: 1200,
+      height: 630,
+      // The mark sits in the middle of a wide navy card: zoom into it rather than squeezing the whole card into a square.
+      crop: { cx: 600, cy: 315, size: 560 },
+    },
     period: "Nov 2025 – May 2026",
     note: "Sister company of Inter-World Shipping Corporation. Worked concurrently with the internship above.",
     systems: [
@@ -118,6 +185,24 @@ export const experience: ExperienceEntry[] = [
           "Tested functionality and helped identify and resolve issues during development.",
         ],
         skills: webStack,
+        evidence: {
+          figures: [
+            {
+              src: "/images/marinoworld.JPG",
+              alt: "Marino World website: the E-Magazine library page listing the latest magazine editions on a dark navy layout.",
+              width: 1600,
+              height: 836,
+              caption: "E-Magazine library",
+            },
+            {
+              src: "/images/marinoworldd.JPG",
+              alt: "Marino World website: a news page with a featured story and two smaller headlines beside it.",
+              width: 1600,
+              height: 793,
+              caption: "News and top stories",
+            },
+          ],
+        },
       },
       {
         name: "Recruitment Management System",
@@ -145,7 +230,7 @@ export const experience: ExperienceEntry[] = [
           "Designed visual materials using Canva.",
           "Prepared and managed content for social media publication.",
         ],
-        skills: ["Canva"],
+        skills: ["Canva", "CapCut", "Meta Business Suite"],
       },
     ],
   },

@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Newsreader } from "next/font/google";
+import { Archivo_Black, DM_Sans, IBM_Plex_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import { site } from "@/data/site";
 import { MIN_SINGLE_HEIGHT, REDUCED_QUERY, SPREAD_QUERY, computeGeometry } from "@/components/dossier/geometry";
-import { TIMELINES } from "@/components/dossier/timeline";
+import Backdrop from "@/components/ui/Backdrop";
 
-const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-const serif = Newsreader({ variable: "--font-newsreader", subsets: ["latin"] });
+// Display: Archivo Black (cover + headings). Body: DM Sans. Reading: Newsreader (serif, plain edition and statements).
+// Technical: IBM Plex Mono. Self-hosted by next/font at
+// build time, so there are no runtime requests to Google and no layout shift (fallbacks are size-adjusted).
+const display = Archivo_Black({ variable: "--font-archivo", subsets: ["latin"], weight: "400", display: "swap" });
+const sans = DM_Sans({ variable: "--font-dm-sans", subsets: ["latin"], display: "swap" });
+const serif = Newsreader({ variable: "--font-newsreader", subsets: ["latin"], style: ["normal", "italic"], display: "swap" });
+const mono = IBM_Plex_Mono({ variable: "--font-plex-mono", subsets: ["latin"], weight: ["400", "500"], display: "swap" });
 
 const ogAlt = `${site.name} | ${site.headline}`;
 
@@ -40,7 +44,7 @@ export const metadata: Metadata = {
 // 1. Marks the page as script-enabled ("js").
 // 2. Chooses the presentation (data-dm): "static" for reduced motion, the saved Plain view or a window too
 //    short for a page; "spread" (two pages) for large landscape windows; "single" for everything else.
-// 3. Gives the folder its final size and the scroll track its length, using the SAME geometry function
+// 3. Gives the folder its final size, using the SAME geometry function
 //    Dossier.tsx uses, so the first frame is already correct and hydration changes nothing.
 // Dossier.tsx keeps all of this up to date afterwards.
 const bootScript = `
@@ -65,7 +69,6 @@ const bootScript = `
     s.setProperty("--ls", g.ls.toFixed(4));
     s.setProperty("--dip", g.dip.toFixed(4));
     s.setProperty("--dy", g.dy + "px");
-    s.setProperty("--total", mode === "spread" ? "${TIMELINES.spread.total.toFixed(3)}" : "${TIMELINES.single.total.toFixed(3)}");
   } catch (e) {}
 })();
 `;
@@ -89,7 +92,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${mono.variable} ${serif.variable}`}
+      className={`${display.variable} ${sans.variable} ${serif.variable} ${mono.variable}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: bootScript }} />
@@ -101,6 +104,7 @@ export default function RootLayout({
         >
           Skip to content
         </a>
+        <Backdrop />
         {children}
         <script
           type="application/ld+json"

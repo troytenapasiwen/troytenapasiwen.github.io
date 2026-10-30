@@ -1,5 +1,4 @@
-import { ArrowDown, ArrowUp } from "lucide-react";
-import { site, navItems } from "@/data/site";
+import { site } from "@/data/site";
 
 /**
  * The cover of the dossier: one physical object that stays the same object for the whole sequence.
@@ -14,11 +13,13 @@ import { site, navItems } from "@/data/site";
  *           box (which morphs from landscape to portrait) and counter-rotates so the type stays
  *           upright and readable while the shell turns beneath it.
  *
- * Everything here is static markup. Dossier.tsx writes scroll progress onto the elements marked
- * `data-drive` and globals.css turns that into transforms.
+ * The cover carries only what a real folder would: a tab, a reference line, the owner's name and role. Everything
+ * else is found by opening it. Dossier.tsx writes progress onto the elements marked `data-drive`; globals.css turns
+ * that into transforms.
  */
 export default function Folder() {
   const nameParts = site.name.split(" ");
+  const initials = nameParts.map((p) => p[0]).join("");
 
   return (
     <div className="d-lid-holder" data-drive>
@@ -27,6 +28,7 @@ export default function Folder() {
       <div className="d-lid" data-drive>
         {/* FRONT: the cover */}
         <div className="d-lid-face d-lid-front" data-drive>
+          <span className="d-lid-shade" data-drive aria-hidden="true" />
           <span className="d-lid-tab d-orn" aria-hidden="true">
             Portfolio
           </span>
@@ -39,8 +41,11 @@ export default function Folder() {
           <div className="d-cover" data-drive>
             <div className="d-print">
               <div className="d-cover-top d-orn" aria-hidden="true">
-                <span>Portfolio dossier</span>
-                <span>Ref · {site.domain}</span>
+                <div>
+                  <span>Portfolio dossier</span>
+                  <span>Ref · {site.domain}</span>
+                </div>
+                <span className="d-index-mark">{initials}</span>
               </div>
 
               <div className="d-cover-main">
@@ -53,28 +58,6 @@ export default function Folder() {
                   ))}
                 </h1>
                 <p className="d-cover-role">{site.headline}</p>
-              </div>
-
-              <div className="d-cover-contents d-orn" aria-hidden="true">
-                <span className="d-cover-label">Contents</span>
-                <span>{navItems.map((n, i) => `${String(i + 1).padStart(2, "0")} ${n.title}`).join("  ·  ")}</span>
-              </div>
-
-              <div className="d-cover-bottom d-orn">
-                <div>
-                  <span className="d-cover-label">Education</span>
-                  <span>{site.subtitle}</span>
-                </div>
-                <div className="d-cover-cue" aria-hidden="true">
-                  <span className="d-cue-start">
-                    <span>Scroll</span>
-                    <ArrowDown className="size-4" />
-                  </span>
-                  <span className="d-cue-end">
-                    <span>Scroll up to reopen</span>
-                    <ArrowUp className="size-4" />
-                  </span>
-                </div>
               </div>
             </div>
           </div>

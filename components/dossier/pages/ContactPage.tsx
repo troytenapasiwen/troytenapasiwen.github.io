@@ -17,26 +17,26 @@ export default function ContactPage() {
     { href: site.links.github, text: `github.com/${site.handle}`, icon: <GitHubIcon className="size-4" />, external: true },
     { href: site.links.linkedin, text: "linkedin.com/in/troypasiwen", icon: <LinkedInIcon className="size-4" />, external: true },
   ];
-  const list = r();
+  const list = r(60);
 
   return (
     <Page
       id="contact"
       left={
         <div className="d-stack d-stack-center">
-          <Write as="h2" className="d-act" {...l()}>
+          <Write as="h2" className="d-act" {...l(30)}>
             <span className="d-act-no">06</span> Contact
           </Write>
-          <Write as="p" className="d-lead" {...l()}>
+          <Write as="p" className="d-lead" {...l(closing.length)}>
             {closing}
           </Write>
         </div>
       }
       right={
         <div className="d-stack d-stack-center">
-          <ul className="write write-stagger d-contact" style={timing(list.s, list.d)}>
+          <ul className="write write-stagger d-contact" style={timing(list.dl, list.du)}>
             {rows.map((row, i) => (
-              <li key={row.href} style={{ "--i": (i / (rows.length - 1)).toFixed(3) } as CSSProperties}>
+              <li key={row.href} style={{ "--n": i } as CSSProperties}>
                 <a
                   href={row.href}
                   {...(row.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
@@ -48,7 +48,7 @@ export default function ContactPage() {
               </li>
             ))}
             {site.resume && (
-              <li style={{ "--i": 1 } as CSSProperties}>
+              <li style={{ "--n": rows.length } as CSSProperties}>
                 <a href={site.resume} download className="d-contact-link">
                   <span>Download resume</span>
                 </a>
@@ -62,7 +62,7 @@ export default function ContactPage() {
             </span>
             <span>End of dossier</span>
             <a href="#top" className="d-backtop">
-              Back to the folder
+              Back to the cover
             </a>
           </Write>
         </div>

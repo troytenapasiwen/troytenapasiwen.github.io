@@ -1,8 +1,10 @@
+import { TechChip } from "./TechChip";
+
 // Renders a list item, so always use it inside a <ul>.
-export default function TechTag({ children }: { children: React.ReactNode }) {
+export default function TechTag({ children }: { children: string }) {
   return (
-    <li className="rounded border border-line px-2 py-0.5 font-mono text-xs text-muted">
-      {children}
+    <li className="border border-rule bg-paper px-2.5 py-1 text-sm text-fg">
+      <TechChip name={children} />
     </li>
   );
 }
