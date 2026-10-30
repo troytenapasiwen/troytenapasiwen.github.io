@@ -1,4 +1,4 @@
-import type { Figure, Note } from "./media";
+import { stackNames, type Figure, type Note, type TechStack } from "./media";
 
 export type Project = {
   slug: string;
@@ -6,7 +6,9 @@ export type Project = {
   kind: string;
   date: string;
   summary: string;
-  tags: string[];
+  tags: string[]; // derived from `stack` where one is given
+  /** Technologies grouped as frontend / backend / deployment. */
+  stack?: TechStack;
   overview: string;
   purpose?: string;
   problem?: string; // add your own text to show a "Problem" section
@@ -25,6 +27,22 @@ export type Project = {
   links?: { href: string; label: string; hint: string }[];
 };
 
+const analyzerStack: TechStack = {
+  frontend: ["Streamlit"],
+  backend: ["Python", "Ollama", "Llama 3.2", "Pydantic", "ChromaDB"],
+  // Only the interface is hosted online. The AI backend runs locally.
+  deployment: [{ name: "Streamlit Community Cloud", scope: "Interface only" }],
+};
+
+const reinaStack: TechStack = {
+  frontend: ["React", "Vite", "TypeScript"],
+  backend: ["Node.js", "Express.js", "PostgreSQL", "Google Maps Directions API"],
+  deployment: [
+    { name: "Render", scope: "Backend" },
+    { name: "Vercel", scope: "Frontend" },
+  ],
+};
+
 export const projects: Project[] = [
   {
     slug: "ai-resume-analyzer",
@@ -32,17 +50,19 @@ export const projects: Project[] = [
     kind: "Personal project",
     date: "Oct 2026",
     summary:
-      "Compares a resume against a job description using a locally hosted LLM, and generates feedback through structured JSON validation.",
-    tags: ["Python", "Streamlit", "Ollama", "Llama 3.2", "Pydantic"],
+      "Analyzes an uploaded resume and answers user queries using a locally hosted LLM, and generates feedback through structured JSON validation.",
+    tags: stackNames(analyzerStack),
+    stack: analyzerStack,
     overview:
-      "An AI-powered resume analysis tool that compares a resume against a job description using a locally hosted LLM. The application uses structured JSON validation with Pydantic to generate relevant resume feedback.",
+      "An AI-powered resume analysis tool that analyzes an uploaded resume and answers user queries using a locally hosted LLM. The application uses structured JSON validation with Pydantic to generate relevant resume feedback.",
     purpose:
       "The project explores how locally hosted LLMs can be used to provide practical resume analysis without relying on a cloud-hosted LLM API.",
     how: [
-      "Takes a resume and a job description and compares them.",
+      "Analyzes an uploaded resume and answers user queries using AI.",
       "Runs the analysis on Llama 3.2, hosted locally through Ollama. No cloud AI API is used.",
       "Uses structured JSON validation with Pydantic to generate relevant resume feedback.",
       "Built with Python and Streamlit.",
+      "Deployed using Streamlit Community Cloud to showcase the interface and user experience.",
     ],
     role: ["Personally built the project."],
     repo: "https://github.com/troytenapasiwen/ai-resume-analyzer",
@@ -70,7 +90,7 @@ export const projects: Project[] = [
       },
     ],
     pipeline: [
-      { step: "Input", label: "Resume and job description" },
+      { step: "Input", label: "Uploaded resume and user queries" },
       { step: "Analysis", label: "Llama 3.2 via Ollama, hosted locally" },
       { step: "Validation", label: "Structured JSON with Pydantic" },
       { step: "Output", label: "Resume feedback" },
@@ -83,9 +103,10 @@ export const projects: Project[] = [
     date: "Sept 2024 – Nov 2025",
     summary:
       "A mobile and web food delivery platform developed as my capstone project.",
-    tags: ["Node.js", "Express.js", "PostgreSQL", "Google Maps Directions API"],
+    tags: stackNames(reinaStack),
+    stack: reinaStack,
     overview:
-      "REINA Pabili Services is a mobile and web food delivery platform developed as my capstone project using Node.js, Express.js, PostgreSQL, and the Google Maps Directions API.",
+      "REINA Pabili Services is a mobile and web food delivery platform developed as my capstone project using Node.js, Express.js, TypeScript, PostgreSQL, and the Google Maps Directions API.",
     role: [
       "Initiated and coordinated the project.",
       "Managed timelines, tasks, requirements, and documentation.",

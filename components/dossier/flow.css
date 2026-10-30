@@ -1,0 +1,207 @@
+/* ==========================================================================================
+   Section dividers, role introductions and scroll cues.
+
+   Kept in its own file (imported by the pages and by Dossier.tsx) so that nothing here has to be added to
+   app/globals.css. It only uses the tokens and hooks that already exist there: the colour variables, the
+   container units of a sheet (cqw), and the engine's data-rv / data-active / data-engine attributes.
+   ========================================================================================== */
+
+/* ---------------------------------------------------------------- plates (the drawings) ----- */
+.fx-plate {
+  margin: 0; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--folder); color: var(--folder-ink); border: 1px solid var(--folder);
+  box-shadow: 0.45em 0.45em 0 var(--vermilion);
+  margin-right: 0.45em; margin-bottom: 0.45em;
+}
+.fx { display: block; flex: 1 1 0; min-height: 0; width: 100%; height: 0; overflow: visible; }
+.fx-cap {
+  flex: none; display: flex; justify-content: space-between; gap: 1em; padding: 0.55em 0.9em 0.65em;
+  border-top: 1px solid rgba(246, 241, 231, 0.22);
+  font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.7em; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--folder-mute);
+}
+.fx-cap span:first-child { color: var(--vermilion); }
+
+/* the drawing's ink (SVG presentation attributes lose to these, which is the point) */
+.fx-ink { stroke: var(--folder-ink); }
+.fx-acc { stroke: var(--vermilion); }
+.fx-accf { fill: var(--vermilion); }
+.fx-accfill { fill: var(--vermilion); stroke: none; }
+.fx-solid { fill: var(--folder-ink); stroke: none; }
+.fx-soft { opacity: 0.55; }
+.fx-guide { stroke: rgba(246, 241, 231, 0.4); }
+.fx-crop { stroke: rgba(246, 241, 231, 0.5); }
+.fx-handle { fill: var(--folder); stroke: var(--vermilion); stroke-width: 1.2; }
+.fx-cursor { fill: var(--folder-ink); stroke: var(--folder); }
+.fx-anchor { fill: var(--folder); stroke: var(--folder-ink); stroke-width: 1.4; }
+.fx-pulse { stroke: var(--vermilion); opacity: 0; transform-box: fill-box; transform-origin: center; }
+.fx-mono { font: 500 9px var(--font-plex-mono), ui-monospace, monospace; letter-spacing: 0.04em; }
+.fx-aa { font: 400 30px var(--font-archivo), "Arial Black", sans-serif; fill: var(--folder-ink); }
+.fx-sw-ivory { fill: var(--folder-ink); }
+.fx-sw-vermilion { fill: var(--vermilion); }
+.fx-sw-line { stroke: var(--folder-ink); }
+.fx-ghost { fill: var(--vermilion); }
+.fx-snap { fill: rgba(255, 89, 61, 0.16); stroke: var(--vermilion); stroke-width: 1.5; opacity: 0; }
+.fx-slot { stroke: var(--vermilion); }
+.fx-layer { stroke: rgba(246, 241, 231, 0.3); }
+.fx-cell { fill: none; stroke-width: 1; }
+.fx-cell-hot { fill: var(--vermilion); stroke: none; }
+.fx-caret { fill: var(--vermilion); }
+.fx-flow, .fx-flow-mk { fill: var(--vermilion); }
+.fx-publish-ring { transform-box: fill-box; transform-origin: center; }
+.fx-draw { stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+.fx-tick { stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+.fx-type, .fx-pop, .fx-draw, .fx-snap, .fx-ghost { transform-box: fill-box; }
+.fx-type { transform-origin: 0 50%; }
+
+/* ---------------------------------------------------------------- the drawing-in -------------
+   While the sheet is being written the lines are drawn in the order of --i; the engine ends the writing after the
+   time reserved by .fx-hold, so all of this has finished before the sheet is marked done. A sheet that is done, and any
+   page where the engine is not running, simply shows the finished drawing. */
+html[data-engine] .d-surface[data-rv="hidden"] .fx-draw { stroke-dashoffset: 1; transition: none; }
+html[data-engine] .d-surface[data-rv="hidden"] .fx-pop { opacity: 0; transition: none; }
+html[data-engine] .d-surface[data-rv="hidden"] .fx-type { transform: scaleX(0); transition: none; }
+html[data-engine] .d-surface[data-rv="running"] .fx-draw {
+  transition: stroke-dashoffset 0.75s cubic-bezier(0.4, 0.05, 0.2, 1) calc(120ms + var(--i, 0) * 55ms);
+}
+html[data-engine] .d-surface[data-rv="running"] .fx-pop {
+  transition: opacity 0.5s ease calc(220ms + var(--i, 0) * 55ms);
+}
+html[data-engine] .d-surface[data-rv="running"] .fx-type {
+  transition: transform 0.6s steps(14, end) calc(160ms + var(--i, 0) * 55ms);
+}
+/* reserves the drawing time (the engine reads --dl / --du of every .write on the sheet); never shown */
+.fx-hold { display: none; }
+
+/* ---------------------------------------------------------------- ambient loops ---------------
+   Only on a sheet that is finished AND on show, so nothing here runs on pages that are turned away or while a leaf is
+   moving. Slow and quiet: they suggest that the drawing is being worked on, they do not compete with the text. */
+.d-surface[data-rv="done"][data-active="true"] .fx-loop-sel { animation: fx-sel 9s cubic-bezier(0.6, 0, 0.3, 1) infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-pulse { animation: fx-pulse 4.4s ease-out infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-pulse-1 { animation-delay: 1.1s; }
+.d-surface[data-rv="done"][data-active="true"] .fx-pulse-2 { animation-delay: 2.2s; }
+.d-surface[data-rv="done"][data-active="true"] .fx-pulse-3 { animation-delay: 3.3s; }
+.d-surface[data-rv="done"][data-active="true"] .fx-loop-drag { animation: fx-drag 7s cubic-bezier(0.5, 0, 0.25, 1) infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-snap { animation: fx-snap 7s ease infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-layer-1 { animation: fx-layer 7s ease infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-caret { animation: fx-caret 1.1s steps(1, end) infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-loop-point { animation: fx-point 5s ease-in-out infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-flow { animation: fx-flow 2.6s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-tick { animation: fx-tick 7s ease infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-tick-1 { animation-delay: 1.3s; }
+.d-surface[data-rv="done"][data-active="true"] .fx-tick-2 { animation-delay: 2.6s; }
+.d-surface[data-rv="done"][data-active="true"] .fx-cell-hot { animation: fx-cell 6s ease infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-cell-1 { animation-delay: 0.7s; }
+.d-surface[data-rv="done"][data-active="true"] .fx-cell-2 { animation-delay: 1.4s; }
+.d-surface[data-rv="done"][data-active="true"] .fx-cell-3 { animation-delay: 2.1s; }
+.d-surface[data-rv="done"][data-active="true"] .fx-cell-4 { animation-delay: 2.8s; }
+.d-surface[data-rv="done"][data-active="true"] .fx-cell-5 { animation-delay: 3.5s; }
+.d-surface[data-rv="done"][data-active="true"] .fx-loop-sel-mk { animation: fx-breathe 4s ease-in-out infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-flow-mk { animation: fx-flow-mk 4.6s linear infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-loop-publish { animation: fx-publish 3.2s ease-in-out infinite; }
+.d-surface[data-rv="done"][data-active="true"] .fx-publish-ring { animation: fx-ring 3.2s ease-out infinite; }
+
+@keyframes fx-sel {
+  0%, 16% { transform: translate(0, 0); }
+  28%, 44% { transform: translate(62px, 0); }
+  56%, 72% { transform: translate(124px, 0); }
+  86%, 100% { transform: translate(0, 0); }
+}
+@keyframes fx-pulse {
+  0% { opacity: 0.9; transform: scale(0.5); }
+  60%, 100% { opacity: 0; transform: scale(1.5); }
+}
+@keyframes fx-drag {
+  0%, 6% { transform: translate(186px, 184px); opacity: 0; }
+  12% { transform: translate(186px, 184px); opacity: 1; }
+  52%, 84% { transform: translate(56px, 232px); opacity: 1; }
+  94% { transform: translate(56px, 232px); opacity: 0; }
+  100% { transform: translate(186px, 184px); opacity: 0; }
+}
+@keyframes fx-snap { 0%, 50% { opacity: 0; } 58%, 82% { opacity: 1; } 92%, 100% { opacity: 0; } }
+@keyframes fx-layer {
+  0%, 50% { stroke: rgba(246, 241, 231, 0.3); fill: transparent; }
+  58%, 82% { stroke: var(--vermilion); fill: rgba(255, 89, 61, 0.14); }
+  92%, 100% { stroke: rgba(246, 241, 231, 0.3); fill: transparent; }
+}
+@keyframes fx-caret { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+@keyframes fx-point { 0%, 100% { transform: translate(0, 0); } 35% { transform: translate(14px, 24px); } 70% { transform: translate(-6px, 36px); } }
+@keyframes fx-flow { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateX(-24px); opacity: 0; } }
+@keyframes fx-tick { 0%, 4% { stroke-dashoffset: 1; } 16%, 86% { stroke-dashoffset: 0; } 96%, 100% { stroke-dashoffset: 1; } }
+@keyframes fx-cell { 0%, 6% { opacity: 0.12; } 18%, 80% { opacity: 1; } 92%, 100% { opacity: 0.12; } }
+@keyframes fx-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes fx-flow-mk {
+  0% { transform: translate(0, 0); opacity: 0; }
+  4% { opacity: 1; }
+  14% { transform: translate(24px, 0); }
+  34% { transform: translate(62px, 0); }
+  42% { transform: translate(72px, 8px); }
+  50% { transform: translate(68px, 16px); }
+  58% { transform: translate(55px, 20px); }
+  72% { transform: translate(55px, 34px); }
+  80% { transform: translate(67px, 38px); }
+  90% { transform: translate(69px, 43px); opacity: 1; }
+  100% { transform: translate(69px, 43px); opacity: 0; }
+}
+@keyframes fx-publish { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes fx-ring { 0% { opacity: 1; transform: scale(0.94); } 70%, 100% { opacity: 0.25; transform: scale(1.08); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-plate * { animation: none !important; transition: none !important; }
+}
+
+/* ---------------------------------------------------------------- divider pages ----------------- */
+.dv-left, .ri-left { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.dv-title {
+  margin: 0; font-family: var(--font-archivo), "Arial Black", sans-serif; font-weight: 400; text-transform: uppercase;
+  font-size: min(3.6em, 10.4cqw); line-height: 0.9; letter-spacing: -0.03em; overflow-wrap: normal;
+}
+.dv-no { display: flex; align-items: center; gap: 0.9em; font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.82em; letter-spacing: 0.18em; color: var(--accent); }
+.dv-no::after { content: ""; width: 3.2em; height: 3px; background: var(--vermilion); }
+.dv-section { margin: 0; display: block; }
+.dv-contents { margin-top: 0.4em; }
+
+/* ---------------------------------------------------------------- role introductions ------------- */
+.ri-text { display: flex; flex-direction: column; flex: 1 1 auto; justify-content: center; gap: 1em; min-width: 0; }
+.ri-role {
+  margin: 0; font-family: var(--font-archivo), "Arial Black", sans-serif; font-weight: 400; text-transform: uppercase;
+  font-size: min(2.35em, 7.6cqw); line-height: 0.96; letter-spacing: -0.025em; overflow-wrap: normal;
+}
+.ri-count { display: flex; align-items: center; gap: 0.7em; font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.8em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+.ri-count::after { content: ""; width: 3.2em; height: 3px; background: var(--vermilion); }
+.ri-next { display: flex; align-items: center; gap: 0.6em; margin: 0.2em 0 0; font-weight: 600; font-size: 0.9em; color: var(--accent); }
+
+/* ---------------------------------------------------------------- scroll cues -------------------
+   1. Section cue. When a section opens (the first spread of each act) a small "Scroll" mark appears at the foot of
+      the sheet, where the page's footer line is, once the page has been drawn. It is a pseudo-element on the sheet (::after on a
+      left half, ::before on a right half, the two that are free) that ScrollCue.tsx switches (data-cue="on" / "off") and it fades as soon as the visitor starts to turn the page.
+      It has no pointer events and takes no part in layout, so it cannot get in the way of anything.
+   2. Overflow cue. A sheet whose body is taller than the room (the engine marks it data-overflow) shows a soft fade
+      and a chevron at the foot of the body; ScrollCue.tsx marks the body data-scrolled once it has been scrolled, and the
+      cue fades out. */
+.d-surface[data-cue][data-side="l"] .d-sheet::after,
+.d-surface[data-cue][data-side="r"] .d-sheet::before {
+  content: "Scroll" url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23b8381a' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M6 13l6 6 6-6'/%3E%3C/svg%3E");
+  position: absolute; z-index: 3; bottom: calc(var(--py) + 0.1rem); right: var(--px); display: flex; align-items: center; gap: 0.55em;
+  font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1.6rem;
+  color: var(--accent); background: none; pointer-events: none;
+  opacity: 0; transition: opacity 0.45s ease;
+}
+.d-surface[data-cue="on"][data-side="l"] .d-sheet::after,
+.d-surface[data-cue="on"][data-side="r"] .d-sheet::before { opacity: 1; transition: opacity 0.7s ease 0.25s; animation: fx-cue-bob 2.4s cubic-bezier(0.45, 0, 0.25, 1) 1s infinite; }
+.d-surface[data-cue][data-side="l"] .d-sheet[data-tone="ink"]::after,
+.d-surface[data-cue][data-side="r"] .d-sheet[data-tone="ink"]::before {
+  content: "Scroll" url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ff593d' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M6 13l6 6 6-6'/%3E%3C/svg%3E");
+}
+@keyframes fx-cue-bob { 0%, 100% { translate: 0 -1px; } 50% { translate: 0 3px; } }
+
+:is([data-dm="spread"], [data-dm="single"]) .d-sheet[data-overflow] .d-body::after {
+  content: ""; flex: none; position: sticky; bottom: -1.1em; z-index: 2; height: 3.4em; margin: -3.4em 0 -1.1em; pointer-events: none;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b8381a' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M6 13l6 6 6-6'/%3E%3C/svg%3E") center calc(100% - 0.7em) / 1.1em no-repeat,
+    linear-gradient(to bottom, transparent, var(--paper) 78%);
+  opacity: 1; transition: opacity 0.45s ease;
+  animation: fx-more-bob 2.4s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+:is([data-dm="spread"], [data-dm="single"]) .d-sheet[data-overflow] .d-body[data-scrolled]::after { opacity: 0; animation: none; }
+@keyframes fx-more-bob { 0%, 100% { background-position: center calc(100% - 0.55em), 0 0; } 50% { background-position: center calc(100% - 0.85em), 0 0; } }

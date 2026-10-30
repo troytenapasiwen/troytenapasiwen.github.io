@@ -2,7 +2,8 @@ import Page from "../Page";
 import Write from "../Write";
 import { sequence } from "../sequence";
 import { Bullets, Caption, RoleNote, TagList } from "../ui";
-import { EvidenceFigure, Mark, NoteBlock, RelationTag, SiteShowcase } from "../evidence";
+import { StackList } from "../stack";
+import { EvidenceFigure, NoteBlock, RelationTag, SiteShowcase } from "../evidence";
 import { ContentPublishIcon, RecruitmentFlowIcon } from "@/components/ui/WorkIcons";
 import { confidentialityNote, experience, type ExperienceEntry, type System } from "@/data/experience";
 
@@ -17,26 +18,10 @@ function findSystem(job: ExperienceEntry, name: string): System {
 
 const isSolo = (s: System) => s.label.toLowerCase().startsWith("independently");
 
-/** The employer: its mark beside its name, then the role and dates. */
-function Employer({ job, q, children }: { job: ExperienceEntry; q: ReturnType<typeof sequence>; children?: React.ReactNode }) {
-  return (
-    <>
-      <Write as="div" className="d-employer" {...q(60)}>
-        {job.logo && <Mark logo={job.logo} />}
-        <span className="d-employer-text">
-          <span className="d-company">{job.company}</span>
-          <span className="d-meta">{job.period}</span>
-        </span>
-      </Write>
-      <Write as="h3" className="d-title" {...q(job.role.length)}>
-        {job.role}
-      </Write>
-      {children}
-    </>
-  );
-}
-
-/** First page of the archive: the Inter-World role (left) and an index of the systems filed under it (right). */
+/**
+ * First page after the Inter-World introduction: an index of the systems filed under the role (left) and the
+ * other work done in it (right). The employer, dates and summary are on the introduction spread (RoleIntroPages.tsx).
+ */
 export function ExperienceOverviewPage() {
   const l = sequence();
   const r = sequence();
@@ -46,29 +31,17 @@ export function ExperienceOverviewPage() {
       foot={confidentialityNote}
       left={
         <div className="d-stack">
-          <Write as="h2" className="d-act" {...l(10)}>
-            <span className="d-act-no">02</span> Experience
-          </Write>
           <Write as="p" className="d-kicker" {...l(40)}>
-            Professional / internship work
+            {iwsc.company}
           </Write>
-          <Employer job={iwsc} q={l}>
-            <Write as="p" className="d-meta" {...l(20)}>
-              {iwsc.note ?? ""}
-            </Write>
-            <Write as="p" className="d-p" {...l(iwsc.summary?.length ?? 0)}>
-              {iwsc.summary ?? ""}
-            </Write>
-          </Employer>
-        </div>
-      }
-      right={
-        <div className="d-stack">
-          <Caption q={r}>Systems filed under this role</Caption>
+          <Write as="h3" className="d-title" {...l(iwsc.role.length)}>
+            {iwsc.role}
+          </Write>
+          <Caption q={l}>Systems filed under this role</Caption>
           <ol className="d-index">
             {iwsc.systems.map((system, i) => (
               <li key={system.name}>
-                <Write as="div" className="d-index-row" {...r(60)}>
+                <Write as="div" className="d-index-row" {...l(60)}>
                   <span className="d-index-no">{String(i + 1).padStart(2, "0")}</span>
                   <span>
                     <span className="d-index-name">{system.name}</span>
@@ -78,6 +51,10 @@ export function ExperienceOverviewPage() {
               </li>
             ))}
           </ol>
+        </div>
+      }
+      right={
+        <div className="d-stack d-stack-center">
           {iwsc.general && (
             <>
               <Caption q={r}>{iwsc.generalTitle ?? "Also in this role"}</Caption>
@@ -148,14 +125,14 @@ export function SystemPage({
           )}
           <Caption q={r}>My contribution</Caption>
           <Bullets items={system.contribution} q={r} />
-          <TagList items={system.skills} label={`Technologies for ${system.name}`} q={r} />
+          {system.stack ? <StackList stack={system.stack} label={`Technologies for ${system.name}`} q={r} /> : <TagList items={system.skills} label={`Technologies for ${system.name}`} q={r} />}
         </div>
       }
     />
   );
 }
 
-/** SEAker System Technologies: the company, an index of what was filed under it, and the Marino World role. */
+/** SEAker System Technologies: an index of what was filed under the role, and the Marino World entry. The company and dates are on the introduction spread. */
 export function SeakerPage() {
   const system = findSystem(seaker, "Marino World Website & CMS");
   const l = sequence();
@@ -169,11 +146,12 @@ export function SeakerPage() {
           <Write as="p" className="d-kicker" {...l(40)}>
             Concurrent internship
           </Write>
-          <Employer job={seaker} q={l}>
-            <Write as="p" className="d-p d-muted" {...l(seaker.note?.length ?? 0)}>
-              {seaker.note ?? ""}
-            </Write>
-          </Employer>
+          <Write as="p" className="d-kicker" {...l(40)}>
+            {seaker.company}
+          </Write>
+          <Write as="h3" className="d-title" {...l(seaker.role.length)}>
+            {seaker.role}
+          </Write>
           <Caption q={l}>Filed under this role</Caption>
           <ol className="d-index">
             {seaker.systems.map((s, i) => (
@@ -228,13 +206,13 @@ export function MarinoPage() {
       left={
         <div className="d-stack">
           <Write as="p" className="d-kicker" {...l(40)}>
-            The website
+            Partner website
           </Write>
           <Write as="h3" className="d-title" {...l(system.name.length)}>
             {system.name}
           </Write>
           {system.evidence && <SiteShowcase figures={system.evidence.figures} q={l} />}
-          <TagList items={system.skills} label={`Technologies for ${system.name}`} q={l} />
+          {system.stack ? <StackList stack={system.stack} label={`Technologies for ${system.name}`} q={l} /> : <TagList items={system.skills} label={`Technologies for ${system.name}`} q={l} />}
         </div>
       }
       right={

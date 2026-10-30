@@ -26,13 +26,17 @@ export type PageDef = { id: string; act: string; /** short name shown in the pag
 /** The physical pages. Each page is a spread: a left half and a right half (see Page.tsx). */
 export const PAGES: PageDef[] = [
   { id: "intro", act: "about", label: "Introduction" },
+  { id: "exp-divider", act: "experience", label: "Experience" },
+  { id: "exp-intro-iwsc", act: "experience", label: "Software Developer Intern" },
   { id: "exp-iwsc", act: "experience", label: "Inter-World" },
   { id: "exp-inventory", act: "experience", label: "Inventory system" },
   { id: "exp-crewing", act: "experience", label: "Crewing system" },
   { id: "exp-forms", act: "experience", label: "Forms portal" },
+  { id: "exp-intro-seaker", act: "experience", label: "IT & Digital Marketing Intern" },
   { id: "exp-seaker", act: "experience", label: "SEAker" },
   { id: "exp-marino", act: "experience", label: "Marino World" },
   { id: "exp-recruitment", act: "experience", label: "Recruitment & content" },
+  { id: "proj-divider", act: "projects", label: "Projects" },
   { id: "proj-analyzer", act: "projects", label: "AI Resume Analyzer" },
   { id: "proj-analyzer-how", act: "projects", label: "Analyzer, how it works" },
   { id: "proj-reina", act: "projects", label: "REINA Pabili" },

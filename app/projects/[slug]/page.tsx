@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { projects } from "@/data/projects";
 import { site } from "@/data/site";
 import TechTag from "@/components/ui/TechTag";
+import PlainStack from "@/components/plain/PlainStack";
 import { GitHubIcon } from "@/components/ui/BrandIcons";
 import { NoteBlock, Shot } from "@/components/dossier/evidence";
 import type { Seq } from "@/components/dossier/sequence";
@@ -86,11 +87,17 @@ export default async function ProjectPage({ params }: Props) {
             <h1 className="mt-3 font-serif text-4xl uppercase leading-[0.95] tracking-tight sm:text-5xl">
               {project.title}
             </h1>
-            <ul className="mt-4 flex flex-wrap gap-2" aria-label="Technologies">
-              {project.tags.map((tag) => (
-                <TechTag key={tag}>{tag}</TechTag>
-              ))}
-            </ul>
+            {project.stack ? (
+              <div className="mt-4">
+                <PlainStack stack={project.stack} label="Technologies" />
+              </div>
+            ) : (
+              <ul className="mt-4 flex flex-wrap gap-2" aria-label="Technologies">
+                {project.tags.map((tag) => (
+                  <TechTag key={tag}>{tag}</TechTag>
+                ))}
+              </ul>
+            )}
             <div className="mt-6 flex flex-wrap gap-3">
               {project.links?.map((link) => (
                 <a

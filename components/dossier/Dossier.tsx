@@ -8,6 +8,7 @@ import { MIN_SINGLE_HEIGHT, REDUCED_QUERY, SPREAD_QUERY, computeGeometry } from 
 import type { Mode } from "./geometry";
 import { ACTS, PAGES, SURFACES, TIMELINES, actById, actStateIndex } from "./timeline";
 import type { Motion, Span } from "./timeline";
+import { useScrollCues } from "./ScrollCue";
 
 /**
  * The engine: ONE state model, played in real time.
@@ -135,6 +136,9 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
   }, []);
 
   const go = useCallback((dir: Dir) => engineRef.current?.request(dir), []);
+
+  // scroll-down cues (see ScrollCue.tsx): they only switch attributes, the engine is untouched
+  useScrollCues(rootRef, { mode: ready ? mode : "static", idx: ui.idx, last: ui.last, busy: ui.busy });
 
   // ---- jump to a section (links in the pages, the address bar, the plain edition's navigation) -----
   const jump = useCallback((id: string) => {

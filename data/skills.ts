@@ -13,7 +13,7 @@ export const skills = [
   },
   {
     category: "AI / LLM",
-    items: ["Ollama", "Llama 3.2", "Pydantic", "AI-Assisted Development", "LLM Tools"],
+    items: ["Ollama", "Llama 3.2", "Pydantic", "ChromaDB", "AI-Assisted Development", "LLM Tools"],
   },
   {
     category: "Testing & QA",

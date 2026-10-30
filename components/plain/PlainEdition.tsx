@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { ArrowUpRight, Mail } from "lucide-react";
 import PlainSwitch from "./PlainSwitch";
+import PlainStack from "./PlainStack";
 import { DeviceShowcase, EvidenceFigure, Mark, NoteBlock, RelationTag, SiteShowcase } from "@/components/dossier/evidence";
 import type { Seq } from "@/components/dossier/sequence";
 import { GitHubIcon, LinkedInIcon } from "@/components/ui/BrandIcons";
@@ -11,6 +12,7 @@ import { confidentialityNote, experience, type ExperienceEntry, type System } fr
 import { projects } from "@/data/projects";
 import { navItems, site } from "@/data/site";
 import { skills } from "@/data/skills";
+import "../dossier/pages/EducationPage.css";
 
 /**
  * The plain reading edition: the same portfolio, set as a quiet editorial publication.
@@ -86,7 +88,7 @@ function Entry({ system, icon }: { system: System; icon?: React.ReactNode }) {
             <li key={c}>{c}</li>
           ))}
         </ul>
-        <Chips items={system.skills} label={`Technologies for ${system.name}`} />
+        {system.stack ? <PlainStack stack={system.stack} label={`Technologies for ${system.name}`} /> : <Chips items={system.skills} label={`Technologies for ${system.name}`} />}
       </div>
       {ev && (
         <div className="pe-entry-media">
@@ -200,7 +202,7 @@ export default function PlainEdition() {
 
           <div className="pe-job">
             <Employer job={seaker} />
-            {seaker.note && <p className="pe-meta">{seaker.note}</p>}
+            {seaker.plainNote && <p className="pe-meta">{seaker.plainNote}</p>}
             {seaker.systems.map((s) => (
               <Entry
                 key={s.name}
@@ -243,7 +245,7 @@ export default function PlainEdition() {
                   <li key={h}>{h}</li>
                 ))}
               </ul>
-              <Chips items={analyzer.tags} label={`Technologies for ${analyzer.title}`} />
+              {analyzer.stack ? <PlainStack stack={analyzer.stack} label={`Technologies for ${analyzer.title}`} /> : <Chips items={analyzer.tags} label={`Technologies for ${analyzer.title}`} />}
               <div className="pe-links">
                 {analyzer.links?.map((l) => (
                   <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" className="pe-link pe-link-strong">
@@ -288,7 +290,7 @@ export default function PlainEdition() {
                 </>
               )}
               <h5 className="pe-h5">Technologies</h5>
-              <Chips items={reina.tags} label={`Technologies for ${reina.title}`} />
+              {reina.stack ? <PlainStack stack={reina.stack} label={`Technologies for ${reina.title}`} /> : <Chips items={reina.tags} label={`Technologies for ${reina.title}`} />}
               {reina.links && (
                 <div className="pe-links">
                   {reina.links.map((l) => (
@@ -321,7 +323,9 @@ export default function PlainEdition() {
               {edu.honors && <p className="pe-honors">{edu.honors}</p>}
             </div>
             <figure className="pe-grad">
-              <Image src={educationMedia.photo.src} alt={educationMedia.photo.alt} width={educationMedia.photo.width} height={educationMedia.photo.height} sizes="(min-width: 960px) 320px, 70vw" loading="lazy" decoding="async" />
+              <span className="eg-crop">
+                <Image src={educationMedia.photo.src} alt={educationMedia.photo.alt} width={educationMedia.photo.width} height={educationMedia.photo.height} sizes="(min-width: 960px) 320px, 70vw" loading="lazy" decoding="async" />
+              </span>
             </figure>
           </div>
         </section>

@@ -1,4 +1,4 @@
-import type { Figure, Logo, Note } from "./media";
+import { stackNames, type Figure, type Logo, type Note, type TechStack } from "./media";
 
 export type System = {
   name: string;
@@ -7,6 +7,8 @@ export type System = {
   impact?: string;
   contribution: string[];
   skills: string[];
+  /** Technologies grouped as frontend / backend / deployment. When set, `skills` is derived from it. */
+  stack?: TechStack;
   /** Real screenshots (login screens only for company systems) and the notes that go with them. */
   evidence?: {
     figures: Figure[];
@@ -22,6 +24,11 @@ export type ExperienceEntry = {
   logo?: Logo;
   period: string;
   note?: string;
+  /**
+   * Shown in the plain edition only. The folder view has its own page for this company and leaves this out,
+   * because the wording refers to the entry printed above it in the plain edition.
+   */
+  plainNote?: string;
   summary?: string;
   systems: System[];
   generalTitle?: string;
@@ -38,14 +45,18 @@ const internalNote = (extra: string): Note => ({
 export const confidentialityNote =
   "Specific implementation details of company systems are not publicly disclosed due to confidentiality.";
 
-const webStack = [
-  "Next.js",
-  "React",
-  "TypeScript",
-  "Firebase",
-  "Cloud Firestore",
-  "Tailwind CSS",
-];
+/** The internal Inter-World systems are hosted on Vercel. */
+const internalStack: TechStack = {
+  frontend: ["Next.js", "React", "TypeScript", "Tailwind CSS"],
+  backend: ["Firebase", "Cloud Firestore"],
+  deployment: [{ name: "Vercel" }],
+};
+
+/** Marino World uses the same web technologies; no hosting platform is documented, so no deployment is listed. */
+const marinoStack: TechStack = {
+  frontend: ["Next.js", "React", "TypeScript", "Tailwind CSS"],
+  backend: ["Firebase", "Cloud Firestore"],
+};
 
 export const experience: ExperienceEntry[] = [
   {
@@ -59,7 +70,7 @@ export const experience: ExperienceEntry[] = [
     systems: [
       {
         name: "Inventory Management System",
-        label: "Contributed to development and maintenance",
+        label: "Contributed to development and maintenance.",
         purpose:
           "An internal application developed to organize and manage company inventory and supplies more efficiently. It moved inventory tracking away from paper-based and manual processes into a centralized digital system.",
         impact:
@@ -71,7 +82,8 @@ export const experience: ExperienceEntry[] = [
           "Performed functional testing and helped identify and resolve issues during development.",
           "Contributed to improvements and refinements based on feedback during development.",
         ],
-        skills: webStack,
+        skills: stackNames(internalStack),
+        stack: internalStack,
         evidence: {
           figures: [
             {
@@ -87,7 +99,7 @@ export const experience: ExperienceEntry[] = [
       },
       {
         name: "Crewing Management System",
-        label: "Contributed to development and maintenance",
+        label: "Contributed to development and maintenance.",
         purpose:
           "An internal web-based application developed to organize and support company crewing operations and related workflows. It centralized information and processes that previously involved more manual or disconnected methods.",
         impact:
@@ -99,7 +111,8 @@ export const experience: ExperienceEntry[] = [
           "Performed functional testing and assisted in identifying and resolving application issues.",
           "Contributed to improvements and refinements based on feedback from company personnel during development.",
         ],
-        skills: webStack,
+        skills: stackNames(internalStack),
+        stack: internalStack,
         evidence: {
           figures: [
             {
@@ -116,7 +129,7 @@ export const experience: ExperienceEntry[] = [
       },
       {
         name: "Automated Forms Portal",
-        label: "Independently developed",
+        label: "Independently developed.",
         purpose:
           "An internal HR web application developed to digitalize form-based processes and reduce reliance on paper documents and manual processing. It provides a centralized way to handle internal forms and makes the process more organized and less time-consuming.",
         impact:
@@ -129,7 +142,8 @@ export const experience: ExperienceEntry[] = [
           "Performed functional testing and resolved issues during development.",
           "Refined the portal based on feedback from intended users.",
         ],
-        skills: webStack,
+        skills: stackNames(internalStack),
+        stack: internalStack,
         evidence: {
           figures: [
             {
@@ -169,13 +183,13 @@ export const experience: ExperienceEntry[] = [
       crop: { cx: 600, cy: 315, size: 560 },
     },
     period: "Nov 2025 – May 2026",
-    note: "Sister company of Inter-World Shipping Corporation. Worked concurrently with the internship above.",
+    plainNote: "Sister company of Inter-World Shipping Corporation. Worked concurrently with the internship above.",
     systems: [
       {
         name: "Marino World Website & CMS",
         label: "Contributed to development",
         purpose:
-          "Marino World is a company news and digital publishing website supported by an integrated content management system. The CMS gives a centralized way to manage and publish website content instead of relying entirely on manual website updates.",
+          "Marino World is a partner of Seaker System Technologies. Seaker contributed to the development of Marino World's website and its integrated content management system. The CMS provides a centralized way to manage and publish website content, reducing the need for manual website updates.",
         impact:
           "Made content management more centralized and streamlined the process of maintaining and publishing website content.",
         contribution: [
@@ -184,7 +198,8 @@ export const experience: ExperienceEntry[] = [
           "Assisted with application data and workflow implementation.",
           "Tested functionality and helped identify and resolve issues during development.",
         ],
-        skills: webStack,
+        skills: stackNames(marinoStack),
+        stack: marinoStack,
         evidence: {
           figures: [
             {
@@ -206,16 +221,16 @@ export const experience: ExperienceEntry[] = [
       },
       {
         name: "Recruitment Management System",
-        label: "Researched and designed the process flow. Developers later implemented the system.",
+        label: "Researched and designed the recruitment workflow. Developers later implemented the process as part of the larger Recruitment Management System.",
         purpose:
-          "Designed to organize and centralize recruitment-related processes into a more structured digital workflow.",
+          "The Recruitment Management System is a broader platform designed to organize and centralize recruitment-related processes into a more structured digital workflow.",
         contribution: [
-          "My role focused on research, process analysis, and workflow design, not on developing the system.",
+          "My role focused on research, process analysis, and workflow design specifically for the recruitment process, not on developing the system.",
           "Researched existing recruitment processes and requirements.",
-          "Consulted with company personnel to understand the required workflow.",
-          "Designed the system’s process flow and helped establish the structure of the recruitment workflow.",
-          "Created the process flow that developers later used when implementing the system for company clients.",
-          "Refined the workflow based on feedback during the planning process.",
+          "Consulted with company personnel to understand the required recruitment workflow.",
+          "Designed the process flow for the recruitment component of the larger system.",
+          "Created the recruitment workflow documentation that developers later used when implementing the system for company clients.",
+          "Refined the recruitment workflow based on feedback during the planning process.",
         ],
         skills: [],
       },

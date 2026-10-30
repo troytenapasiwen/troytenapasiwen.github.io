@@ -4,6 +4,7 @@ import Write, { Rule } from "../Write";
 import { sequence } from "../sequence";
 import { Stamp } from "../ui";
 import { education, educationMedia } from "@/data/education";
+import "./EducationPage.css";
 
 /** Education: the university's own wide mark with its name (left); the graduation portrait above the programme (right). */
 export default function EducationPage() {
@@ -32,7 +33,9 @@ export default function EducationPage() {
       right={
         <div className="d-stack d-stack-center">
           <Write as="figure" mode="image" className="d-grad" {...r(60)}>
-            <Image src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} sizes="(min-width: 1024px) 340px, 70vw" loading="lazy" decoding="async" />
+            <span className="eg-crop">
+              <Image src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} sizes="(min-width: 1024px) 340px, 70vw" loading="lazy" decoding="async" />
+            </span>
           </Write>
           {education.map((item) => (
             <article key={item.school + item.degree} className="d-edu">

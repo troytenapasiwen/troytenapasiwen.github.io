@@ -1,0 +1,30 @@
+/* Project introduction spreads: the project on the left, its screens on the right.
+   Component-level styles only (the `pv-` prefix is used nowhere else); the screenshot window, phone frame, caption
+   chip and "View image" button come from the shared evidence styles in globals.css. Everything is sized in em so the
+   sheet's own fit scaling keeps the composition inside the page. */
+
+/* ---- left page: the project, set large ---------------------------------------------------- */
+.pv-intro { flex: 1 1 auto; justify-content: center; gap: 1.1em; }
+.pv-intro .pv-lede { font-size: 1.04em; line-height: 1.6; max-width: 34em; }
+
+/* ---- right page: the screens --------------------------------------------------------------- */
+.pv-stage { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
+/* The width is limited by the page height as well (about 0.97 x width tall), so the pair always fits the sheet. */
+.pv-show { position: relative; margin: 0; width: min(100%, calc((100cqh - 11rem) / 0.97)); min-width: 16em; }
+
+/* web view and phone: the web view is the base; the phone stands in front of its lower-left corner and hangs below it
+   (the right edge of the page carries the thumb tab, so the overlap goes left). One screen alone simply fills the width. */
+.pv-web { position: relative; display: block; }
+.pv-both .pv-web { margin-left: 16%; }
+.pv-web .d-shot { box-shadow: 0.55em 0.55em 0 var(--vermilion); }
+.pv-web .d-tagline { left: auto; right: 0; }
+.pv-phone { position: absolute; z-index: 2; left: 0; bottom: 0; width: 36%; display: block; }
+.pv-phone .d-phone { padding: 0.32em; border-radius: 1.5em; box-shadow: 0 0.6em 1em -0.7em rgba(var(--ink-warm), 0.7); }
+.pv-phone .d-phone-img { border-radius: 1.15em; }
+.pv-phone .d-tagline { left: 0.32em; bottom: 0.32em; border-radius: 0 0.6em 0 1.15em; }
+.pv-phone .d-viewbtn { top: 0.9em; right: 50%; translate: 50% 0; white-space: nowrap; font-size: 0.62em; padding: 0.1em 0.45em; min-height: 1.5rem; }
+/* room under the web view for the part of the phone that hangs below it */
+.pv-both { padding-bottom: 47%; }
+
+/* ---- details pages (what moved off the introduction) --------------------------------------- */
+.pv-notes { display: flex; flex-direction: column; gap: 0.95em; }

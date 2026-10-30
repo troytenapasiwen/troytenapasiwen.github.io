@@ -1,4 +1,4 @@
-import { Accessibility, Bot, BrainCircuit, Clapperboard, Code, Coffee, Database, FlaskConical, Gauge, Megaphone, MonitorSmartphone, Smartphone, Sparkles } from "lucide-react";
+import { Accessibility, Bot, BrainCircuit, Clapperboard, Cloud, Code, Coffee, Database, FlaskConical, Gauge, Megaphone, MonitorSmartphone, Smartphone, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { techMarks } from "./techMarks";
 
@@ -19,6 +19,8 @@ const markFor: Record<string, string> = {
   PostgreSQL: "postgresql",
   Python: "python",
   Streamlit: "streamlit",
+  // Streamlit's own hosting service, shown with the Streamlit mark.
+  "Streamlit Community Cloud": "streamlit",
   Ollama: "ollama",
   "Google Maps Directions API": "googlemaps",
   MySQL: "mysql",
@@ -41,6 +43,8 @@ const iconFor: Record<string, LucideIcon> = {
   "HTML/CSS": Code,
   Java: Coffee,
   "Cloud Firestore": Database,
+  ChromaDB: Database,
+  Render: Cloud,
   "Microsoft SQL Server": Database,
   "Llama 3.2": Bot,
   "AI-Assisted Development": Sparkles,

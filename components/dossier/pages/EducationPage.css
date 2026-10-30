@@ -1,0 +1,29 @@
+/* Graduation photo: a slight zoom, framed by a crop box so the border and offset shadow stay put while the picture
+   is enlarged inside them. Shared by the folder (.d-grad) and the plain edition (.pe-grad). Specificity is kept above
+   the base `.d-grad img` / `.pe-grad img` rules in globals.css, so load order does not matter. */
+.d-grad .eg-crop,
+.pe-grad .eg-crop {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  border: 1px solid var(--fg);
+  box-shadow: 0.5em 0.5em 0 var(--vermilion);
+  background: var(--paper-2, #e9e3d3);
+}
+.pe-grad .eg-crop { width: calc(100% - 0.6rem); box-shadow: 0.6rem 0.6rem 0 var(--vermilion); }
+.d-grad .eg-crop img,
+.pe-grad .eg-crop img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border: 0;
+  box-shadow: none;
+  object-fit: cover;
+  object-position: 50% 24%;
+  /* ~12% zoom, anchored high so the cap and tassel are not cut off */
+  transform: scale(1.12);
+  transform-origin: 46% 30%;
+}

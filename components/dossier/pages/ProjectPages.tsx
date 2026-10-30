@@ -1,17 +1,65 @@
+import Image from "next/image";
 import type { CSSProperties } from "react";
 import { ArrowUpRight } from "lucide-react";
 import Page from "../Page";
 import Write, { timing } from "../Write";
 import { sequence, type Seq } from "../sequence";
 import { Bullets, Caption, TagList } from "../ui";
-import { EvidenceFigure, NoteBlock, PhoneFigure } from "../evidence";
+import { StackList } from "../stack";
+import { NoteBlock, Shot } from "../evidence";
+import { ViewImageButton } from "../ImageViewer";
 import { GitHubIcon } from "@/components/ui/BrandIcons";
 import { projects } from "@/data/projects";
+import type { Figure } from "@/data/media";
+import "./ProjectPages.css";
 
 function getProject(slug: string) {
   const project = projects.find((p) => p.slug === slug);
   if (!project) throw new Error(`Missing project: ${slug}`);
   return project;
+}
+
+/**
+ * The AI Resume Analyzer's phone screenshot is an existing file in public/images that data/projects.ts does not list
+ * (only its web preview is). It is described here, next to the page that uses it, so no project data is changed.
+ */
+const analyzerMobile: Figure = {
+  src: "/images/airesumeanalyzer_mob.jpg",
+  alt: "AI Resume Analyzer on a phone: an \u201cAdd a resume\u201d section with a PDF upload box, above a \u201cQuestions\u201d section.",
+  width: 828,
+  height: 1606,
+  caption: "Mobile view",
+};
+
+/**
+ * The right-hand page of a project introduction: the web screenshot, with the phone screenshot standing in front of
+ * its lower-left corner. Without a phone view (or without a web view) it shows the one screen it has. Sizes come from
+ * each image's own width and height, so nothing is stretched.
+ */
+function ProjectScreens({ web, mobile, label, q }: { web?: Figure; mobile?: Figure; label: string; q: Seq }) {
+  return (
+    <div className="pv-stage">
+      <Write as="figure" mode="image" className={`pv-show ${web && mobile ? "pv-both" : "pv-one"}`} {...q(120)}>
+        {web && (
+          <span className="pv-web" style={mobile ? undefined : { marginLeft: 0 }}>
+            <Shot figure={web} priority />
+            <span className="d-tagline">{web.caption}</span>
+            <ViewImageButton figure={web} />
+          </span>
+        )}
+        {mobile && (
+          <span className="pv-phone">
+            <span className="d-phone">
+              <Image src={mobile.src} alt={mobile.alt} width={mobile.width} height={mobile.height} sizes="160px" loading="lazy" decoding="async" className="d-phone-img" />
+            </span>
+            <span className="d-tagline">{mobile.caption}</span>
+            <ViewImageButton figure={mobile} />
+          </span>
+        )}
+        <figcaption className="sr-only">{label}</figcaption>
+      </Write>
+    </div>
+  );
 }
 
 /** Project actions get their own block and wrap on narrow screens. */
@@ -42,17 +90,19 @@ function ProjectLinks({ slug, repo, title, q, live = false }: { slug: string; re
   );
 }
 
-/** AI Resume Analyzer, part one. Left: what it is. Right: the interface, its status and the public preview. */
+/**
+ * AI Resume Analyzer, introduction. Left: the name and the description. Right: the interface on the web and on a
+ * phone. Everything else about the project is on the next spread.
+ */
 export function AnalyzerPage() {
   const p = getProject("ai-resume-analyzer");
   const l = sequence();
   const r = sequence();
-  const note = p.notes?.[0];
   return (
     <Page
       id="proj-analyzer"
       left={
-        <div className="d-stack">
+        <div className="d-stack pv-intro">
           <div className="d-head">
             <Write as="h2" className="d-act" {...l(10)}>
               <span className="d-act-no">03</span> Projects
@@ -64,39 +114,34 @@ export function AnalyzerPage() {
               {p.title}
             </Write>
           </div>
-          <Write as="p" className="d-p" {...l(p.overview.length)}>
+          <Write as="p" className="d-p pv-lede" {...l(p.overview.length)}>
             {p.overview}
           </Write>
-          {p.purpose && (
-            <Write as="p" className="d-p d-muted" {...l(p.purpose.length)}>
-              {p.purpose}
-            </Write>
-          )}
         </div>
       }
-      right={
-        <div className="d-stack">
-          {p.figures?.[0] && <EvidenceFigure figure={p.figures[0]} q={r} />}
-          {note && <NoteBlock note={note} q={r} />}
-          <ProjectLinks slug={p.slug} title={p.title} q={r} live />
-        </div>
-      }
+      right={<ProjectScreens web={p.figures?.[0]} mobile={analyzerMobile} label="The AI Resume Analyzer on the web and on a phone" q={r} />}
     />
   );
 }
 
-/** AI Resume Analyzer, part two: how it works, the process, and the stack. */
+/** AI Resume Analyzer, details: the purpose, how it works and my role (left); the status, process, stack and links (right). */
 export function AnalyzerHowPage() {
   const p = getProject("ai-resume-analyzer");
   const l = sequence();
   const r = sequence();
   const steps = p.pipeline ?? [];
   const pipe = r(60);
+  const note = p.notes?.[0];
   return (
     <Page
       id="proj-analyzer-how"
       left={
         <div className="d-stack d-stack-mid d-roomy">
+          {p.purpose && (
+            <Write as="p" className="d-p d-muted" {...l(p.purpose.length)}>
+              {p.purpose}
+            </Write>
+          )}
           <Caption q={l}>How it works</Caption>
           <Bullets items={p.how ?? []} q={l} />
           <Caption q={l}>My role</Caption>
@@ -119,19 +164,25 @@ export function AnalyzerHowPage() {
             </>
           )}
           <Caption q={r}>Technologies</Caption>
-          <TagList items={p.tags} label={`Technologies for ${p.title}`} q={r} />
-          <ProjectLinks slug={p.slug} repo={p.repo} title={p.title} q={r} />
+          {p.stack ? <StackList stack={p.stack} label={`Technologies for ${p.title}`} q={r} /> : <TagList items={p.tags} label={`Technologies for ${p.title}`} q={r} />}
+          {note && <NoteBlock note={note} q={r} />}
+          <ProjectLinks slug={p.slug} repo={p.repo} title={p.title} q={r} live />
         </div>
       }
     />
   );
 }
 
-/** REINA Pabili Services, part one: the project and my role (left); testing, technologies and links (right). */
+/**
+ * REINA Pabili Services, introduction. Left: the name and the description. Right: the web and mobile views.
+ * The role, testing, technologies, notes and links are on the next spread.
+ */
 export function ReinaPage() {
   const p = getProject("reina-pabili-services");
   const l = sequence();
   const r = sequence();
+  const web = p.figures?.find((f) => f.caption === "Web view");
+  const mobile = p.figures?.find((f) => f.caption === "Mobile view");
   return (
     <Page
       id="proj-reina"
@@ -141,67 +192,51 @@ export function ReinaPage() {
         </>
       }
       left={
-        <div className="d-stack">
+        <div className="d-stack pv-intro">
           <Write as="p" className="d-kicker" {...l(40)}>
             {`${p.kind} · ${p.date}`}
           </Write>
           <Write as="h3" className="d-display d-display-md" {...l(p.title.length)}>
             {p.title}
           </Write>
-          <Write as="p" className="d-p" {...l(p.overview.length)}>
+          <Write as="p" className="d-p pv-lede" {...l(p.overview.length)}>
             {p.overview}
           </Write>
-          <Caption q={l}>My role</Caption>
-          <Bullets items={p.role ?? []} q={l} />
         </div>
       }
-      right={
-        <div className="d-stack d-stack-mid d-roomy">
-          {p.testing && (
-            <>
-              <Caption q={r}>Testing conducted</Caption>
-              <TagList items={p.testing} label="Types of testing conducted" q={r} />
-            </>
-          )}
-          <Caption q={r}>Technologies</Caption>
-          <TagList items={p.tags} label={`Technologies for ${p.title}`} q={r} />
-          <ProjectLinks slug={p.slug} repo={p.repo} title={p.title} q={r} live />
-        </div>
-      }
+      right={<ProjectScreens web={web} mobile={mobile} label="REINA Pabili Services on the web and on a phone" q={r} />}
     />
   );
 }
 
-/**
- * REINA Pabili Services, part two: the same application on two screens, one on each page of the spread.
- * The web view and its status note on the left; the phone view and the service area on the right.
- */
+/** REINA Pabili Services, details: my role and the testing conducted (left); the stack, notes and links (right). */
 export function ReinaScreensPage() {
   const p = getProject("reina-pabili-services");
   const l = sequence();
   const r = sequence();
-  const web = p.figures?.find((f) => f.caption === "Web view");
-  const mobile = p.figures?.find((f) => f.caption === "Mobile view");
-  const status = p.notes?.find((n) => n.tone === "status");
-  const scope = p.notes?.find((n) => n.tone === "scope");
   return (
     <Page
       id="proj-reina-screens"
       left={
-        <div className="d-stack d-stack-mid">
-          <Write as="p" className="d-kicker" {...l(40)}>
-            One application, two screens
-          </Write>
-          {web && <EvidenceFigure figure={web} q={l} />}
-          {status && <NoteBlock note={status} q={l} />}
+        <div className="d-stack d-stack-mid d-roomy">
+          <Caption q={l}>My role</Caption>
+          <Bullets items={p.role ?? []} q={l} />
+          {p.testing && (
+            <>
+              <Caption q={l}>Testing conducted</Caption>
+              <TagList items={p.testing} label="Types of testing conducted" q={l} />
+            </>
+          )}
         </div>
       }
       right={
-        <div className="d-stack d-stack-mid">
-          <div className="d-phonerow">
-            {mobile && <PhoneFigure figure={mobile} q={r} />}
-            <div className="d-phonerow-note">{scope && <NoteBlock note={scope} q={r} />}</div>
+        <div className="d-stack d-stack-mid d-roomy">
+          <Caption q={r}>Technologies</Caption>
+          {p.stack ? <StackList stack={p.stack} label={`Technologies for ${p.title}`} q={r} /> : <TagList items={p.tags} label={`Technologies for ${p.title}`} q={r} />}
+          <div className="pv-notes">
+            {p.notes?.map((n) => <NoteBlock key={n.label} note={n} q={r} />)}
           </div>
+          <ProjectLinks slug={p.slug} repo={p.repo} title={p.title} q={r} live />
         </div>
       }
     />

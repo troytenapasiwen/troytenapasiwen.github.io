@@ -16,7 +16,7 @@ export const educationMedia: {
 } = {
   logo: { src: "/images/NUUU.webp", alt: "National University logo", width: 2158, height: 696 },
   photo: {
-    src: "/images/grad.jpg",
+    src: "/images/grad.JPG",
     alt: "Troy Pasiwen in a graduation gown with a red stole, photographed against a dark blue backdrop.",
     width: 1852,
     height: 2355,

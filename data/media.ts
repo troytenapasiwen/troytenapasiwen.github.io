@@ -22,6 +22,19 @@ export type Note = {
   text: string;
 };
 
+/** Technologies grouped the way the portfolio presents them. A group that is left out is not shown. */
+export type TechStack = {
+  frontend?: string[];
+  backend?: string[];
+  /** Where it is hosted. `scope` says which part is hosted there, when it is only a part (e.g. "Backend"). */
+  deployment?: { name: string; scope?: string }[];
+};
+
+/** Every technology name in a stack, once, in display order. */
+export function stackNames(stack: TechStack): string[] {
+  return Array.from(new Set([...(stack.frontend ?? []), ...(stack.backend ?? []), ...(stack.deployment ?? []).map((d) => d.name)]));
+}
+
 /** A company or school mark. `crop` zooms into part of a larger picture instead of squeezing it (no distortion). */
 export type Logo = {
   src: string;
