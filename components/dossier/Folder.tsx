@@ -13,6 +13,13 @@ import { site } from "@/data/site";
  *           box (which morphs from landscape to portrait) and counter-rotates so the type stays
  *           upright and readable while the shell turns beneath it.
  *
+ * Construction (all of it is geometry, none of it is a picture of a folder):
+ *   board   the lid is a slab, not a card: a front face, an inside face, and four edge planes between them, so the
+ *           free edge shows its thickness and catches the light while the cover swings open.
+ *   hinge   `.d-spine` is the fold that joins the lid to the rear board. It is a cloth-covered gusset: a rounded
+ *           strip with a groove on each side where it meets the boards, and stitching at both ends.
+ *   rear    the back board is a slab as well (see `.d-rear` in Dossier.tsx) with the same edge construction.
+ *
  * The cover carries only what a real folder would: a tab, a reference line, the owner's name and role. Everything
  * else is found by opening it. Dossier.tsx writes progress onto the elements marked `data-drive`; globals.css turns
  * that into transforms.
@@ -23,7 +30,10 @@ export default function Folder() {
 
   return (
     <div className="d-lid-holder" data-drive>
-      <span className="d-spine d-orn" aria-hidden="true" />
+      <span className="d-spine d-orn" aria-hidden="true">
+        <i className="d-stitch d-stitch-a" />
+        <i className="d-stitch d-stitch-b" />
+      </span>
 
       <div className="d-lid" data-drive>
         {/* FRONT: the cover */}
@@ -65,6 +75,12 @@ export default function Folder() {
 
         {/* BACK: the inside of the cover, seen as the lid swings open and then lies flat on the left */}
         <div className="d-lid-face d-lid-back" aria-hidden="true" />
+
+        {/* the board's edges: planes between the front and the inside face */}
+        <i className="d-le d-le-t" aria-hidden="true" />
+        <i className="d-le d-le-r" aria-hidden="true" />
+        <i className="d-le d-le-b" aria-hidden="true" />
+        <i className="d-le d-le-l" aria-hidden="true" />
       </div>
     </div>
   );

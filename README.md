@@ -1,6 +1,6 @@
 # Troy Pasiwen: Portfolio
 
-My Personal Portfolio, Software Developer | Web, Mobile & AI.
+My Personal Portfolio, Full-Stack Web Developer | AI | UI/UX.
 
 Live site: https://troytenapasiwen.github.io
 GitHub: https://github.com/troytenapasiwen
@@ -29,7 +29,7 @@ Wheel, touch swipes, the arrow keys and the Previous / Next buttons all call the
 - `components/dossier/evidence.tsx`: screenshots, notes, the website and phone showcases, company marks.
 - `components/dossier/pages/`: one file per scene.
 - `components/plain/`: the plain reading edition (see below).
-- `components/ui/Backdrop.tsx`: the desk behind everything (grid, loose sheets, contact-sheet strip, grain). It never takes part in layout or input, and does not move on phones, with reduced motion, or in the plain edition.
+- `components/ui/Backdrop.tsx`: the desk behind everything (lit tabletop, drafting grid, ruler, two piles of paper, grain). It never takes part in layout or input and has no animation of its own: it only shifts a few pixels, by transform, with the folder's pose (`--pose`), and is calmer in the plain edition.
 - `components/ui/TechChip.tsx` and `techMarks.ts`: technology logos, vendored locally (see the licence note in `techMarks.ts`). A technology with no official mark is shown as text only.
 - `components/ui/WorkIcons.tsx`: pictograms for work that has no screenshot.
 - `app/globals.css`: colour tokens at the top, then every style.
@@ -39,7 +39,7 @@ Wheel, touch swipes, the arrow keys and the Previous / Next buttons all call the
 Three presentations, chosen before first paint (`<html data-dm>`):
 
 - **spread** (desktop): two pages visible at once, like an open book. A leaf's front is a right half and its back is the next left half, so one turn reveals a new spread.
-- **single** (phones, portrait tablets): one page at a time; every half-page is its own sheet that physically swings away about the spine.
+- **single** (phones, portrait tablets): one page at a time; every half-page is its own sheet that physically swings away about the spine. It is the same folder as on the desktop, smaller: it is first seen closed and lying in landscape, fully inside the screen, and its first step turns it upright (`geometry.ts` guarantees it never leaves the screen on the way) before it opens.
 - **static** (reduced motion, the "Plain view" button, a window too short to hold a page, or no JavaScript): the plain edition, an editorial single page with normal scrolling and no animation, built from the same data.
 
 Pages never overlap their own header or footer: the body shrinks its type slightly (never below a floor) if a half-page is too tall, and only then becomes scrollable, so nothing is ever hidden.

@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Archivo_Black, DM_Sans, IBM_Plex_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
@@ -22,6 +23,10 @@ export const metadata: Metadata = {
     template: `%s | ${site.name}`,
   },
   description: site.description,
+ icons: {
+  icon: "/portfolio-favicon.png",
+  shortcut: "/portfolio-favicon.png",
+},
   authors: [{ name: site.name, url: site.url }],
   creator: site.name,
   openGraph: {

@@ -1,8 +1,8 @@
 export const site = {
   name: "Troy Pasiwen",
-  role: "Software Developer",
+  role: "Full-Stack Web Developer",
   focus: "Web, Mobile & AI",
-  headline: "Software Developer | Web, Mobile & AI",
+  headline: "Full-Stack Web Developer | AI | UI/UX",
   subtitle: "BS Information Technology, National University – Manila",
   /** The one-line positioning statement used on the introduction page. Restates the description below. */
   statement:

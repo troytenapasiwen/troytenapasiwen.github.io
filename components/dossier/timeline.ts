@@ -13,10 +13,12 @@ import { navItems } from "@/data/site";
  * (so every motion has a fixed, tuned duration), and every physical value (rotation, lid angle, leaf angle) is a
  * pure function of it. Playing a motion backwards is the same function at a smaller `u`.
  *
- * Two layouts share the model:
+ * Two layouts share the model, and both begin as a closed LANDSCAPE folder that turns upright before it opens:
  *   spread  desktop: two pages are visible at once (like a book). A leaf has a front (right page) and a back (the
  *           next left page), so one turn reveals a whole new spread.
- *   single  phones / portrait tablets: one page is visible; every half-page is its own sheet.
+ *   single  phones / portrait tablets: one page is visible; every half-page is its own sheet. The folder is the same
+ *           physical object as on the desktop, only smaller (geometry.ts), so it too is first seen lying in landscape
+ *           and turns a quarter turn on the first step.
  *
  * Both the server (page numbering) and the client (the engine) import this file, so they never disagree.
  */
@@ -75,8 +77,8 @@ export type Timeline = {
 
 export function buildTimeline(layout: Layout): Timeline {
   const leaves = (layout === "spread" ? PAGES.length : SURFACES) - 1;
-  // Phones and portrait tablets are already portrait: their folder starts upright, so it does not turn first.
-  const rot = layout === "spread" ? 1 : 0;
+  // Both layouts turn the folder a quarter turn before it opens (and back again after it closes).
+  const rot = 1;
   const rotateIn = { a: 0, b: rot };
   const open = { a: rotateIn.b, b: rotateIn.b + 1 };
   const turns: Span[] = [];

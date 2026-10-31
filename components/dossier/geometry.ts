@@ -28,6 +28,8 @@ export function computeGeometry(layout: "spread" | "single", vw: number, vh: num
   let pw: number;
   let ph: number;
   let dy: number;
+  let ls: number;
+  let dip: number;
   if (layout === "spread") {
     const top = 58 + safeTop; // room for the folder tab
     const bottom = 64 + safeBottom; // room for the page controls and the plain-view button
@@ -36,24 +38,44 @@ export function computeGeometry(layout: "spread" | "single", vw: number, vh: num
     pw = even(Math.min(availW / 2, availH * 0.78, 760));
     ph = even(Math.min(availH, pw / 0.78));
     dy = (top - bottom) / 2;
+    ls = clamp(Math.min(1.4, (vw * 0.92) / ph, (vh - 156) / pw), 0.5, 1.4);
+    // halfway through the quarter turn the bounding box is larger than in either orientation
+    const diag = (pw + ph) * Math.SQRT1_2;
+    const fits = Math.min((vh - 90) / diag, (vw * 0.92) / diag);
+    dip = Math.max(0, (ls + 1) / 2 - fits);
   } else {
-    const m = vw < 480 ? 14 : 28;
-    const top = 40 + safeTop;
-    const bottom = 64 + safeBottom; // page controls
+    // A phone (or portrait tablet) holds the SAME folder as the desktop, just smaller. It is first seen closed and lying
+    // in landscape, and its first step turns it upright. So the geometry has to satisfy three poses, not one:
+    //   landscape (closed)  the whole folder, tab included, inside the screen
+    //   every angle between the folder never leaves the screen while it turns
+    //   portrait (open)     one page, as wide as the screen allows
+    const m = vw < 480 ? 14 : 28; // desk left on each side of the upright folder
+    const top = 44 + safeTop; // room for the folder tab
+    const bottom = 72 + safeBottom; // page controls
     const availH = vh - top - bottom;
-    ph = even(Math.max(300, Math.min(availH, 1000)));
-    pw = even(Math.min(vw - 2 * m, 640, ph * 0.78));
+    const availW = Math.min(vw - 2 * m, 640);
+    // An upright folder is never narrower than 0.6 of its height: a taller one would be a strip, and lying down it
+    // would be an unconvincing, flat slab. On a tall phone the desk shows above and below it instead.
+    ph = even(Math.max(300, Math.min(availH, 1000, availW / 0.6)));
+    pw = even(Math.min(availW, ph * 0.78));
     dy = (top - bottom) / 2;
+    const tab = 46; // the orange tab (26px on screen, 46 in the folder's own units) stands out of its top edge: its right edge while it lies down
+    ls = clamp(Math.min(1.15, (vw - 28) / (ph + tab), (vh - top - bottom) / pw), 0.3, 1.15);
+    // Scale while turning is ls + (1 - ls) * a^4 minus a pull-back of arc * dip, where arc is 4a(1-a) and a is the
+    // eased turn (globals.css uses the same formula). The folder stays small while it is still wide on the diagonal and
+    // only grows once it is nearly upright. The pull-back is the smallest one for which the turning folder's bounding
+    // box fits at every angle (sampled), not only at the 45 degree moment.
+    dip = 0;
+    for (let k = 1; k < 40; k++) {
+      const a = k / 40;
+      const arc = 4 * a * (1 - a);
+      const th = (1 - a) * Math.PI * 0.5;
+      const bw = pw * Math.cos(th) + ph * Math.sin(th) + tab * Math.sin(th); // width of the turned box (the tab counted once: it is on one side)
+      const bh = pw * Math.sin(th) + ph * Math.cos(th);
+      const room = Math.min((vw - 24) / bw, (vh - top - bottom + 2 * Math.min(top, bottom) - 24) / bh);
+      dip = Math.max(dip, (ls + (1 - ls) * a * a * a * a - room) / arc);
+    }
+    dip = clamp(dip, 0, 0.9);
   }
-  const ls = spreadOrSingleLs(layout, pw, ph, vw, vh);
-  // halfway through the quarter turn the bounding box is larger than in either orientation
-  const diag = (pw + ph) * Math.SQRT1_2;
-  const fits = Math.min((vh - 90) / diag, (vw * 0.92) / diag);
-  const dip = Math.max(0, (ls + 1) / 2 - fits);
   return { pw, ph, ls, dip, dy };
-
-  function spreadOrSingleLs(l: string, w: number, h: number, vw2: number, vh2: number) {
-    const max = l === "spread" ? 1.4 : 1.3;
-    return clamp(Math.min(max, (vw2 * 0.92) / h, (vh2 - 156) / w), 0.5, max);
-  }
 }

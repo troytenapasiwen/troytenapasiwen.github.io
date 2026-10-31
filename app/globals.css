@@ -78,119 +78,106 @@ body {
 
 /* ==========================================================================================
    THE DESK (backdrop). Fixed, behind everything, never interactive. See components/ui/Backdrop.tsx.
-   Quiet by design: a few elements drift by transform only, and not at all on phones, with reduced
-   motion, or in the plain edition.
+   Light comes from the top left, so every shadow on the desk falls to the bottom right, exactly as the folder's does.
+   Nothing here animates by itself. The few elements that answer to the folder (--pose, written by the engine) move by
+   transform only, and they are promoted to layers once, not repainted.
    ========================================================================================== */
-.bd { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+@property --pose { syntax: "<number>"; inherits: true; initial-value: 0; }
+.bd { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; --pose: 0; }
 .bd > * { position: absolute; }
-.bd-glow {
+
+/* the table: warm paper-board tone, lighter toward the light (top left), a little heavier at the far corner */
+.bd-table {
   inset: 0;
-  background: radial-gradient(ellipse 52% 62% at 50% 47%, rgba(255, 252, 244, 0.95), rgba(255, 252, 244, 0) 72%);
+  background:
+    radial-gradient(120% 90% at 18% 8%, rgba(255, 251, 241, 0.7), rgba(255, 251, 241, 0) 62%),
+    linear-gradient(162deg, #ece5d6 0%, #e6dfd0 46%, #dbd2c0 100%);
 }
-/* The table top is a plane that recedes: a technical grid laid flat and seen at a slant, so its lines converge toward the
-   far edge, and fade out there. (A static transform: it never animates, and it takes no part in layout.) */
+/* the pool of light the folder sits in; it leans a little toward the open spread as the folder opens */
+.bd-pool {
+  left: -10%; right: -10%; top: -6%; bottom: -6%;
+  background: radial-gradient(46% 52% at 50% 46%, rgba(255, 253, 246, 0.9), rgba(255, 253, 246, 0) 72%);
+  transform: translate3d(calc(var(--pose) * 2.5vw), calc(var(--pose) * -1vh), 0);
+  opacity: calc(0.78 + var(--pose) * 0.22);
+  will-change: transform;
+}
+/* a drafting grid laid flat on the table and seen at a slant: its lines converge toward the far edge and fade there */
 .bd-plane {
   left: -35%; right: -35%; top: -70vh; bottom: -34vh;
   transform-origin: 50% 100%; transform: perspective(1100px) rotateX(58deg);
-  -webkit-mask-image: linear-gradient(to top, #000 34%, rgba(0, 0, 0, 0.5) 62%, transparent 94%);
-  mask-image: linear-gradient(to top, #000 34%, rgba(0, 0, 0, 0.5) 62%, transparent 94%);
+  -webkit-mask-image: linear-gradient(to top, #000 30%, rgba(0, 0, 0, 0.42) 60%, transparent 92%);
+  mask-image: linear-gradient(to top, #000 30%, rgba(0, 0, 0, 0.42) 60%, transparent 92%);
 }
-/* fine lines every 56px, stronger every 224px */
 .bd-grid {
   inset: 0;
   background-image:
-    linear-gradient(to right, rgba(var(--ink-warm), 0.17) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(var(--ink-warm), 0.17) 1px, transparent 1px),
-    linear-gradient(to right, rgba(var(--ink-warm), 0.09) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(var(--ink-warm), 0.09) 1px, transparent 1px);
+    linear-gradient(to right, rgba(var(--ink-warm), 0.13) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(var(--ink-warm), 0.13) 1px, transparent 1px),
+    linear-gradient(to right, rgba(var(--ink-warm), 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(var(--ink-warm), 0.07) 1px, transparent 1px);
   background-size: 224px 224px, 224px 224px, 56px 56px, 56px 56px;
 }
-/* the far end of the table is a little darker, the near end catches the light */
-.bd-far { inset: 0; background: linear-gradient(to bottom, rgba(var(--ink-warm), 0.1), rgba(var(--ink-warm), 0) 42%); }
-/* a ruler down the left edge, with one orange tick */
+/* a ruler lying down the left edge: a pale bevelled strip with ticks, one orange mark, and a shadow to its right */
 .bd-ruler {
-  left: clamp(8px, 1.6vw, 26px); top: 0; bottom: 0; width: 16px;
+  left: clamp(8px, 1.7vw, 28px); top: -2vh; bottom: -2vh; width: 21px; border-radius: 1px;
   background:
-    repeating-linear-gradient(to bottom, rgba(var(--ink-warm), 0.38) 0 1px, transparent 1px 100px) left top / 16px 100% no-repeat,
-    repeating-linear-gradient(to bottom, rgba(var(--ink-warm), 0.26) 0 1px, transparent 1px 20px) left top / 8px 100% no-repeat;
-}
-.bd-ruler::after { content: ""; position: absolute; left: 0; top: 36%; width: 24px; height: 2px; background: var(--vermilion); }
-/* loose sheets lying under the folder. Each is a stack: the sheet, two more under it (turned a few degrees), edge lines for
-   the thickness, and a contact shadow thrown to the bottom right (the light is at the top left, as on the folder). */
-.bd-sheet {
-  background: linear-gradient(135deg, rgba(255, 253, 247, 0.86), rgba(247, 242, 230, 0.8)); border: 1px solid rgba(var(--ink-warm), 0.14);
+    repeating-linear-gradient(to bottom, rgba(var(--ink-warm), 0.55) 0 1px, transparent 1px 100px) right top / 14px 100% no-repeat,
+    repeating-linear-gradient(to bottom, rgba(var(--ink-warm), 0.4) 0 1px, transparent 1px 20px) right top / 8px 100% no-repeat,
+    linear-gradient(90deg, #f6f0e1, #ece4d1 70%, #dfd6c1);
   box-shadow:
-    1px 1px 0 rgba(253, 250, 242, 0.95), 2px 2px 0 rgba(var(--ink-warm), 0.2), 3px 3px 0 rgba(253, 250, 242, 0.9), 4px 4px 0 rgba(var(--ink-warm), 0.17),
-    9px 15px 18px -9px rgba(var(--ink-warm), 0.38), 22px 34px 40px -22px rgba(var(--ink-warm), 0.3);
-  padding: 7% 8%; display: flex; flex-direction: column; gap: 1.1em; will-change: transform;
+    inset 1px 0 0 rgba(255, 255, 255, 0.85), inset -1px 0 0 rgba(var(--ink-warm), 0.22),
+    1px 0 0 rgba(var(--ink-warm), 0.18), 3px 3px 4px -1px rgba(var(--ink-warm), 0.4), 9px 8px 16px -6px rgba(var(--ink-warm), 0.3);
 }
-.bd-sheet::before, .bd-sheet::after {
-  content: ""; position: absolute; inset: 0; z-index: -1; background: rgba(250, 246, 235, 0.82); border: 1px solid rgba(var(--ink-warm), 0.12);
-  box-shadow: 4px 7px 10px -6px rgba(var(--ink-warm), 0.3);
+.bd-ruler i { position: absolute; right: 0; top: 36%; width: 21px; height: 2px; background: var(--vermilion); }
+/* two piles of loose paper. Each sheet is a real layer with an edge; the pile casts one shadow to the bottom right. */
+.bd-pile {
+  background: linear-gradient(135deg, #fffdf7, #f4eee0);
+  border: 1px solid rgba(var(--ink-warm), 0.13);
+  box-shadow:
+    1px 1px 0 #faf6ea, 2px 2px 0 rgba(var(--ink-warm), 0.16), 3px 3px 0 #f6f1e3, 4px 4px 0 rgba(var(--ink-warm), 0.14),
+    8px 12px 14px -7px rgba(var(--ink-warm), 0.36), 20px 30px 38px -20px rgba(var(--ink-warm), 0.3);
+  transition: none; will-change: transform;
 }
-.bd-sheet::before { transform: translate(-9px, 6px) rotate(-2.1deg); }
-.bd-sheet::after { transform: translate(7px, 10px) rotate(1.6deg); z-index: -2; }
-.bd-sheet i { display: block; height: 2px; background: rgba(var(--ink-warm), 0.12); }
-.bd-sheet i:nth-child(1) { width: 38%; height: 5px; background: rgba(var(--ink-warm), 0.2); }
-.bd-sheet i:nth-child(2) { width: 88%; } .bd-sheet i:nth-child(3) { width: 74%; }
-.bd-sheet i:nth-child(4) { width: 82%; } .bd-sheet i:nth-child(5) { width: 46%; }
-.bd-sheet-a { left: 5vw; top: 16vh; width: 31vw; height: 60vh; transform: rotate(-3.4deg); animation: bd-a 52s ease-in-out infinite alternate; }
-.bd-sheet-b { right: 4vw; top: 11vh; width: 28vw; height: 68vh; transform: rotate(2.6deg); animation: bd-b 61s ease-in-out infinite alternate; }
-.bd-sheet-c { left: 15vw; bottom: 5vh; width: 15vw; height: 24vh; transform: rotate(5.5deg); padding: 6% 8%; gap: 0.8em; }
-@keyframes bd-a { to { transform: translate3d(14px, -10px, 0) rotate(-2.8deg); } }
-@keyframes bd-b { to { transform: translate3d(-12px, 12px, 0) rotate(3.1deg); } }
-/* a strip of empty contact-sheet frames, one marked in orange */
-.bd-strip {
-  left: 0; right: 0; top: clamp(8px, 2.6vh, 28px); height: 46px; overflow: hidden;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+.bd-pile b { position: absolute; left: 8%; height: 2px; background: rgba(var(--ink-warm), 0.11); }
+.bd-pile b:nth-child(1) { top: 9%; width: 36%; height: 5px; background: rgba(var(--ink-warm), 0.18); }
+.bd-pile b:nth-child(2) { top: 16%; width: 80%; }
+.bd-pile b:nth-child(3) { top: 20%; width: 66%; }
+.bd-pile::before, .bd-pile::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; background: #f7f2e5; border: 1px solid rgba(var(--ink-warm), 0.11);
+  box-shadow: 3px 5px 8px -5px rgba(var(--ink-warm), 0.3);
 }
-.bd-strip-track { display: flex; gap: 10px; width: max-content; animation: bd-strip 170s linear infinite; will-change: transform; }
-.bd-strip-track span {
-  flex: none; width: 66px; height: 42px; padding: 3px 5px; border: 1px solid rgba(var(--ink-warm), 0.2);
-  font: 500 9px/1 var(--font-plex-mono), ui-monospace, monospace; color: rgba(var(--ink-warm), 0.55);
-}
-.bd-strip-track span[data-hot="1"] { border-color: var(--vermilion); color: var(--accent); }
-@keyframes bd-strip { to { transform: translate3d(-50%, 0, 0); } }
-/* an oversized outlined monogram, cropped by the corner of the screen */
-.bd-mono {
-  right: -1vw; bottom: -8vh; font-family: var(--font-archivo), "Arial Black", sans-serif;
-  font-size: min(48vw, 66vh); line-height: 0.8; letter-spacing: -0.05em; color: transparent;
-  -webkit-text-stroke: 1px rgba(var(--ink-warm), 0.11);
-}
-/* two hairlines that drift slowly across the desk */
-.bd-line-v { left: 19vw; top: -10%; height: 120%; width: 1px; background: linear-gradient(to bottom, transparent, rgba(255, 89, 61, 0.55) 30%, rgba(255, 89, 61, 0.55) 70%, transparent); animation: bd-lv 70s ease-in-out infinite alternate; }
-.bd-line-h { top: 79vh; left: -5%; width: 110%; height: 1px; background: linear-gradient(to right, transparent, rgba(var(--ink-warm), 0.3) 25%, rgba(var(--ink-warm), 0.3) 75%, transparent); animation: bd-lh 80s ease-in-out infinite alternate; }
-@keyframes bd-lv { to { transform: translate3d(28px, 0, 0); } }
-@keyframes bd-lh { to { transform: translate3d(0, -26px, 0); } }
-/* registration marks in the corners */
+.bd-pile::before { transform: translate(-7px, 5px) rotate(-1.7deg); }
+.bd-pile::after { transform: translate(6px, 8px) rotate(1.3deg); z-index: -2; }
+.bd-pile-a { left: 4.5vw; top: 15vh; width: 30vw; height: 60vh; transform: translate3d(calc(var(--pose) * -10px), calc(var(--pose) * -6px), 0) rotate(-3.2deg); }
+.bd-pile-b { right: 3.5vw; top: 12vh; width: 27vw; height: 66vh; transform: translate3d(calc(var(--pose) * 8px), calc(var(--pose) * 6px), 0) rotate(2.4deg); }
+/* registration marks */
 .bd-reg { width: 20px; height: 20px; }
 .bd-reg::before, .bd-reg::after { content: ""; position: absolute; background: rgba(var(--ink-warm), 0.5); }
 .bd-reg::before { left: 9px; top: 0; width: 1px; height: 20px; }
 .bd-reg::after { top: 9px; left: 0; height: 1px; width: 20px; }
-.bd-reg-tl { left: 54px; top: 62px; } .bd-reg-tr { right: 22px; top: 62px; }
+.bd-reg-tl { left: 54px; top: 22px; } .bd-reg-tr { right: 22px; top: 22px; }
 .bd-reg-bl { left: 54px; bottom: 22px; } .bd-reg-br { right: 22px; bottom: 22px; }
 .bd-reg-tl::before, .bd-reg-tl::after, .bd-reg-br::before, .bd-reg-br::after { background: var(--vermilion); }
-/* paper grain: one small tiled noise, static, no blend modes */
+/* the grain of the table: two tiled noises (a fine tooth and a slow mottling), static, no blend modes */
 .bd-grain {
-  inset: 0; opacity: 0.9;
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35 0 0 0 0 .28 0 0 0 0 .18 0 0 0 .09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>") 0 0 / 160px 160px;
+  inset: 0;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='m' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='.011' numOctaves='3' seed='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .3 0 0 0 0 .24 0 0 0 0 .14 0 0 0 .55 -.18'/></filter><rect width='100%' height='100%' filter='url(%23m)'/></svg>") 0 0 / 520px 520px,
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .35 0 0 0 0 .28 0 0 0 0 .18 0 0 0 .085 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>") 0 0 / 160px 160px;
 }
-.bd-vignette { inset: 0; background: radial-gradient(ellipse 75% 70% at 50% 46%, transparent 55%, rgba(var(--ink-warm), 0.2) 100%); }
+.bd-vignette { inset: 0; background: radial-gradient(ellipse 80% 74% at 48% 46%, transparent 52%, rgba(var(--ink-warm), 0.22) 100%); }
 
-/* phones and touch screens: no moving parts, and the loose sheets are dropped */
+/* phones and touch screens: one pile, no ruler, nothing that is not needed to tell where the light is */
 @media (max-width: 820px), (pointer: coarse) {
-  .bd-sheet, .bd-strip-track, .bd-line-v, .bd-line-h { animation: none; }
-  .bd-sheet-b, .bd-sheet-c, .bd-strip, .bd-mono { display: none; }
-  .bd-sheet-a { left: -8vw; width: 60vw; opacity: 0.6; }
+  .bd-pile-b, .bd-ruler { display: none; }
+  .bd-pile-a { left: -10vw; top: 9vh; width: 58vw; height: 40vh; opacity: 0.85; }
   .bd-plane { top: -40vh; }
-  .bd-ruler { display: none; }
   .bd-reg-tl, .bd-reg-bl { left: 14px; }
+  .bd-reg-tl, .bd-reg-tr { top: 14px; }
 }
 /* the plain edition: the same desk, calmer, so long text stays easy to read */
 :is([data-dm="static"], html:not(.js)) .bd { opacity: 0.55; }
-:is([data-dm="static"], html:not(.js)) :is(.bd-sheet, .bd-strip-track, .bd-line-v, .bd-line-h) { animation: none; }
-:is([data-dm="static"], html:not(.js)) :is(.bd-sheet, .bd-mono, .bd-glow) { display: none; }
+:is([data-dm="static"], html:not(.js)) :is(.bd-pile, .bd-pool) { display: none; }
 
 /* ==========================================================================================
    PHYSICAL STATE
@@ -215,6 +202,11 @@ body {
 @property --sh { syntax: "<number>"; inherits: false; initial-value: 0; }
 @property --cs { syntax: "<number>"; inherits: false; initial-value: 0; }
 @property --ct { syntax: "<number>"; inherits: false; initial-value: 0; }
+/* the shape of a leaf in the air, all derived from its own --t, none of them inherited (an inherited custom property that
+   changes every frame would restyle the whole sheet under it) */
+@property --bow { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --peel { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --lag { syntax: "<number>"; inherits: false; initial-value: 0; }
 /* the draw progress of one block of text, 0 → 1 (see REVEAL below) */
 @property --w { syntax: "<number>"; inherits: false; initial-value: 1; }
 
@@ -226,8 +218,13 @@ body {
   --scale: calc(var(--ls, 1) + (1 - var(--ls, 1)) * var(--a) - var(--arc) * var(--dip, 0)); /* landscape is larger; pulled back mid-turn so it fits */
 }
 
-/* Phones and portrait tablets: the folder is already upright (also correct before the script runs). */
-[data-dm="single"] [data-drive] { --ra: 1; }
+/* The phone's folder is the same object, smaller: lying down it is ls (< 1) of its upright size. It stays small while it is still wide
+   on the diagonal and only grows once it is nearly upright (a to the fourth power); geometry.ts uses the same formula to
+   guarantee that the turning folder never leaves the screen. */
+[data-dm="single"] [data-drive] {
+  --scale: calc(var(--ls, 1) + (1 - var(--ls, 1)) * var(--a) * var(--a) * var(--a) * var(--a) - var(--arc) * var(--dip, 0));
+}
+
 
 /* ==========================================================================================
    PRESENTATION SWITCH
@@ -253,9 +250,17 @@ html:is([data-dm="spread"], [data-dm="single"]) body { height: 100%; overflow: h
   --bd: 14px;        /* the dark folder board around the paper */
   --shift: 0;        /* how far (in pages) the folder slides right as it opens */
   --zl: 5; --zf: 1; --zlz: 2px; --zfz: 1px;   /* lid above the pages while closed, below once open */
+  --rad: clamp(6px, calc(var(--pw) * 0.022), 14px);   /* the rolled corner of every board */
+  --thk: clamp(4px, calc(var(--pw) * 0.012), 8px);    /* the thickness of a board */
+  /* the board's surface: a fine tooth (pressboard grain) and a slow mottling (uneven finish). Static tiles, under 10%. */
+  --board-tooth: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .13 -.03'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  --board-mottle: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='m' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='.008' numOctaves='2' seed='7' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .16 -.055'/></filter><rect width='100%' height='100%' filter='url(%23m)'/></svg>") 0 0 / 300px 300px;
 }
 [data-dm="spread"] { --shift: 0.5; }
-[data-dm="single"] { --bd: 12px; --persp: 9000px; }
+[data-dm="single"] { --bd: 10px; --persp: 9000px; }
+/* lying down, the orange tab (26px on screen) stands out of the folder's right edge: the folder moves left by half of it,
+   so the whole thing, tab included, is centred on the screen */
+[data-dm="single"] .d-root { --tabx: -13px; }
 .d-root[data-lidtop="0"] { --zl: 1; --zf: 5; --zlz: 1px; --zfz: 2px; }
 
 .d-root { position: relative; overflow-x: clip; }
@@ -285,69 +290,94 @@ html:is([data-dm="spread"], [data-dm="single"]) body { height: 100%; overflow: h
 .pe-switch .d-toggle-text { display: inline; }
 
 /* ---------------------------------------------------------------- the folder ------------- */
-/* The folder shell is always built portrait; landscape is the same shell turned a quarter turn. */
+/* The folder shell is always built portrait; landscape is the same shell turned a quarter turn.
 
-/* the spine: the thickness of the fold the lid hinges on, a flat darker plane of the same black */
-.d-spine {
-  position: absolute; left: -6px; top: 0; bottom: 0; width: 12px; border-radius: 3px 0 0 3px;
+   MATERIAL. One board is used for the cover, the inside of the cover and the back board: matte black pressboard under a
+   satin finish. Three things make it read as a made object rather than a dark rectangle:
+     1. a rolled edge: each board is a rounded slab with a thin lit rim on the sides that face the light (top, left), a dark
+        rim on the others and a soft falloff inside, so the corners turn instead of simply ending;
+     2. thickness: the edge is built up in layers (a lit outer wrap, the dark core, the liner) and falls to the bottom right,
+        the way the light does. While a board swings, the same layers are real planes (.d-le on the lid, .d-re on the back);
+     3. tooth: two static tiled noises (--board-tooth, --board-mottle), both under 10%, so they never touch the lettering.
+   There is no gloss and no reflection: the sheen is one broad soft falloff from the top left, not a highlight. */
+.d-lid-front, .d-frame {
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.9) 0 1px, transparent 1px 4px, rgba(255, 255, 255, 0.07) 4px 5px, transparent 5px) 0 6% / 100% 5px no-repeat,
-    linear-gradient(90deg, rgba(0, 0, 0, 0.9) 0 1px, transparent 1px 4px, rgba(255, 255, 255, 0.07) 4px 5px, transparent 5px) 0 94% / 100% 5px no-repeat,
-    linear-gradient(90deg, #000, #272420 28%, #0d0c0b 56%, #1b1917 82%, #000);
-  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.16), inset -1px 0 0 rgba(255, 255, 255, 0.05), -1px 0 0 var(--folder-dk), -2px 3px 5px -1px rgba(var(--ink-warm), 0.55);
-  transform: translateZ(1px);
+    radial-gradient(120% 80% at 12% 0%, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0) 60%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0) 38%, rgba(0, 0, 0, 0.3) 100%),
+    var(--board-tooth), var(--board-mottle), #131211;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 1px 0 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.65), inset -1px 0 0 rgba(0, 0, 0, 0.5),
+    inset 3px 4px 7px -4px rgba(255, 255, 255, 0.075), inset -5px -6px 10px -5px rgba(0, 0, 0, 0.55),
+    0 0 0 1px var(--folder-dk),
+    1px 1px 0 1px #34302c, 2px 2px 0 1px #1c1a18, 3px 3px 0 1px #0c0b0a, 4px 4px 0 1px #040303;
 }
+.d-lid-front, .d-lid-back, .d-frame { border-radius: var(--rad); }
 
-/* the lid: hinged on its left edge, opens right → left, comes to rest flat on the left */
+/* the hinge: the fold that joins the lid to the back board. A cloth-covered gusset (a rounded strip lit from the left,
+   with a groove where each board meets it) and the stitching at both ends. The lid turns about its inner edge. */
+.d-spine {
+  position: absolute; left: calc(var(--thk) * -1.5); top: 0; bottom: 0; width: calc(var(--thk) * 3);
+  border-radius: calc(var(--rad) * 0.8) 0 0 calc(var(--rad) * 0.8);
+  background:
+    var(--board-tooth),
+    linear-gradient(90deg, #040303 0, #1f1d1a 12%, #3b3732 34%, #1d1b18 62%, #0b0a09 86%, #030202 100%);
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.16), inset -1px 0 0 rgba(0, 0, 0, 0.7), -1px 0 0 var(--folder-dk), -2px 3px 4px -1px rgba(var(--ink-warm), 0.5);
+}
+.d-stitch {
+  position: absolute; left: 25%; width: 2px; height: 6%;
+  background: repeating-linear-gradient(to bottom, rgba(246, 241, 231, 0.34) 0 3px, transparent 3px 8px);
+}
+.d-stitch-a { top: 3%; } .d-stitch-b { bottom: 3%; }
+
+/* the lid: a slab hinged on its left edge. It opens right → left and comes to rest flat on the left. The front face
+   stands half a board-thickness in front of the hinge line and the inside face half behind it, so when the lid has
+   swung over it lies exactly where the back board lies. */
 .d-lid {
   position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 0 50%;
-  transform: translate3d(0, 0, 3px) rotateY(calc(var(--e) * -180deg));
+  transform: rotateY(calc(var(--e) * -180deg));
   will-change: transform;
 }
 .d-lid-face {
-  position: absolute; inset: 0; border-radius: 2px;
+  position: absolute; inset: 0;
   -webkit-backface-visibility: hidden; backface-visibility: hidden;
 }
-.d-lid-front {
-  color: var(--folder-ink);
-  /* matte black board with a paper tooth: one tiny tiled noise, blended softly */
-  background:
-    linear-gradient(158deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0) 30%, rgba(0, 0, 0, 0.18) 100%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.5'/></svg>"),
-    var(--folder);
-  background-blend-mode: normal, soft-light, normal;
-  border-radius: 3px;
-  /* the board has thickness: a lit bevel top-left, a dark one bottom-right, and the board's own edge stacked below and to
-     the right in three layers (light comes from the top left). Neutral warm cast shadow. */
-  box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 2px rgba(255, 255, 255, 0.025), inset -1px -1px 0 rgba(0, 0, 0, 0.7),
-    0 0 0 1px var(--folder-dk), 1px 1px 0 1px #1b1917, 2px 2px 0 1px #100f0d, 3px 3px 0 1px #070605,
-    0 16px 30px -16px rgba(var(--ink-warm), 0.7);
-}
-/* a ruled frame printed into the cover */
+.d-lid-front { color: var(--folder-ink); transform: translateZ(calc(var(--thk) / 2)); }
+/* the lettering frame is pressed into the board, not printed on it: a dark line with a lit lip under it */
 .d-lid-front::before {
-  content: ""; position: absolute; inset: 14px; border: 1px solid rgba(246, 241, 231, 0.24);
-  border-radius: 0; pointer-events: none;
+  content: ""; position: absolute; inset: 14px; border: 1px solid rgba(0, 0, 0, 0.62); border-radius: calc(var(--rad) * 0.4);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.085), inset 0 1px 0 rgba(255, 255, 255, 0.07); pointer-events: none;
 }
 /* the cover darkens as it turns away from the light while it swings (a real element: see Folder.tsx) */
 .d-lid-shade {
-  position: absolute; inset: 0; border-radius: 3px; pointer-events: none;
+  position: absolute; inset: 0; border-radius: var(--rad); pointer-events: none;
   background: linear-gradient(100deg, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.6));
   opacity: var(--e);
 }
+/* the inside of the cover: a lighter, linen-lined board the first page lies on */
 .d-lid-back {
-  transform: rotateY(180deg);
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0) 9%), var(--folder-2);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 0 0 1px var(--folder-dk), 0 16px 34px -16px rgba(var(--ink-warm), 0.7);
+  transform: rotateY(180deg) translateZ(calc(var(--thk) / 2));
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 8%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.014) 0 1px, transparent 1px 3px),
+    var(--board-mottle), var(--folder-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 0 0 1px var(--folder-dk);
   color: var(--folder-ink);
 }
+/* the edge planes of the lid. Top and left face the light and are lit; bottom and right are not. Each is built up across
+   its thickness: lit wrap, dark core, liner. */
+.d-le { position: absolute; pointer-events: none; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.d-le-t { left: calc(var(--rad) * 0.6); right: calc(var(--rad) * 0.6); top: calc(var(--thk) / -2); height: var(--thk); transform: rotateX(90deg); background: linear-gradient(to bottom, #4b463f, #181614 34%, #0c0b0a 68%, #37332e); }
+.d-le-b { left: calc(var(--rad) * 0.6); right: calc(var(--rad) * 0.6); bottom: calc(var(--thk) / -2); height: var(--thk); transform: rotateX(-90deg); background: linear-gradient(to bottom, #2c2926, #0d0c0b 34%, #050504 68%, #1c1a18); }
+.d-le-l { top: calc(var(--rad) * 0.6); bottom: calc(var(--rad) * 0.6); left: calc(var(--thk) / -2); width: var(--thk); transform: rotateY(-90deg); background: linear-gradient(to right, #3b3732, #151311 34%, #0a0908 68%, #2c2926); }
+.d-le-r { top: calc(var(--rad) * 0.6); bottom: calc(var(--rad) * 0.6); right: calc(var(--thk) / -2); width: var(--thk); transform: rotateY(90deg); background: linear-gradient(to left, #2c2926, #0d0c0b 34%, #050504 68%, #1c1a18); }
 
 /* the orange index tab, and the score line where the cover folds at the spine */
 .d-lid-tab {
   position: absolute; left: clamp(1.4rem, 7%, 3.4rem); top: -1.9rem; height: 1.9rem; padding: 0 1.7rem;
   display: flex; align-items: center;
   font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase;
-  color: var(--fg); background: var(--vermilion);
+  color: var(--fg); background: linear-gradient(180deg, #ff6c52, var(--vermilion) 55%, #f04d31);
   clip-path: polygon(0 100%, 7% 0, 93% 0, 100% 100%);
 }
 .d-crease {
@@ -405,6 +435,13 @@ html:is([data-dm="spread"], [data-dm="single"]) body { height: 100%; overflow: h
 }
 :is([data-dm="spread"], [data-dm="single"]) .d-cover-name { font-size: calc(9.6cqw + 8.8cqw * var(--af)); }
 :is([data-dm="spread"], [data-dm="single"]) .d-cover-role { font-size: max(0.8rem, calc(1.5cqw + 1.2cqw * var(--af))); }
+/* On a phone the folder first lies down at ls (about 0.6) of its upright size. Small print and the tab are sized against
+   that, so that in the closed landscape pose they are about 10 to 13px on screen, not 6. */
+[data-dm="single"] .d-cover-top { font-size: calc(10px / var(--ls, 1)); }
+[data-dm="single"] .d-cover-role { font-size: calc(13px / var(--ls, 1)); }
+[data-dm="single"] .d-index-mark { width: calc(34px / var(--ls, 1)); font-size: calc(13px / var(--ls, 1)); }
+[data-dm="single"] .d-lid-tab { height: calc(26px / var(--ls, 1)); top: calc(-26px / var(--ls, 1)); padding: 0 calc(20px / var(--ls, 1)); font-size: calc(10px / var(--ls, 1)); }
+[data-dm="single"] .d-root { --tabx: -13px; }   /* half of that tab, on screen */
 .d-root[data-state="start"][data-lidtop="1"] .d-object { cursor: pointer; }
 
 /* ---------------------------------------------------------------- the scroll invitation ----- */
@@ -435,19 +472,20 @@ html:is([data-dm="spread"], [data-dm="single"]) body { height: 100%; overflow: h
 /* The object is the closed portrait folder, centred in the stage. Every state is a transform of it:
      rotateZ   landscape → portrait (a rigid quarter turn of the whole object)
      rotateX/Y a small lift-and-tilt while it turns, plus a gentle pointer tilt while it is closed
-     scale     landscape is shown larger, settling to 1
-     translate (spread only) slides right by half a page as the lid opens so the open spread is centred */
+     scale     landscape is shown larger on a desktop and smaller on a phone, settling to 1
+     translate (spread only) slides right by half a page as the lid opens so the open spread is centred;
+               (single only) lying down, the tab is counted: the folder moves left by half of it (--tabx) */
 .d-stage, .d-object { display: block; }
-.d-shadow { display: none; }
+.d-ground, .d-rear, .d-stackpaper { display: none; }
 :is([data-dm="spread"], [data-dm="single"]) .d-object {
   position: absolute; left: 50%; top: calc(50% + var(--dy)); width: var(--pw); height: var(--ph);
   margin: calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2);
   transform-style: preserve-3d;
   transform:
     perspective(5200px)
-    translate3d(calc(var(--pw) * var(--shift) * var(--e)), calc(var(--arc) * -16px), 0)
-    rotateX(calc(var(--arc) * 9deg + var(--ty) * clamp(0, calc(1 - var(--op) * 6), 1) * -1.1deg))
-    rotateY(calc(var(--arc) * -7deg + var(--tx) * clamp(0, calc(1 - var(--op) * 6), 1) * 1.6deg))
+    translate3d(calc(var(--pw) * var(--shift) * var(--e) + var(--tabx, 0px) * (1 - var(--a))), calc(var(--arc) * -16px), 0)
+    rotateX(calc(var(--arc) * 11deg + var(--ty) * clamp(0, calc(1 - var(--op) * 6), 1) * -1.1deg))
+    rotateY(calc(var(--arc) * -8deg + var(--tx) * clamp(0, calc(1 - var(--op) * 6), 1) * 1.6deg))
     scale(var(--scale))
     rotateZ(var(--turn));
   will-change: transform;
@@ -457,28 +495,50 @@ html:is([data-dm="spread"], [data-dm="single"]) body { height: 100%; overflow: h
 @keyframes d-enter { from { opacity: 0; translate: 0 22px; } }
 /* Fully open: a plain translation (crisp text, no 3D resampling). */
 :is([data-dm="spread"], [data-dm="single"]) .d-root[data-settled="1"] .d-object {
-  transform: translate3d(calc(var(--pw) * var(--shift)), 0, 0);
+  transform: translate3d(calc(var(--pw) * var(--shift) + var(--tabx, 0px) * (1 - var(--a))), 0, 0);
 }
 
-/* sheets of paper standing in the folder, seen at its edge */
-:is([data-dm="spread"], [data-dm="single"]) .d-object::before,
-:is([data-dm="spread"], [data-dm="single"]) .d-object::after {
-  content: ""; position: absolute; inset: 0; border-radius: 3px; border: 1px solid var(--rule); background: var(--paper);
+/* the paper standing in the folder, seen where it rises above the top edge and past the right edge: six sheets, each with
+   its own edge, alternating pale and shadowed, so the stack has visible layers rather than one offset rectangle */
+:is([data-dm="spread"], [data-dm="single"]) .d-stackpaper {
+  display: block; position: absolute; inset: 0; border-radius: var(--rad); background: var(--paper); border: 1px solid var(--rule);
+  transform: translate3d(9px, -7px, -4px); pointer-events: none;
+  box-shadow: 1px -1px 0 #e9e2cf, 2px -2px 0 #b9b19b, 3px -3px 0 #f2ecdd, 4px -4px 0 #c4bba5, 5px -5px 0 #f4efe0, 6px -6px 0 #6b6558;
 }
-:is([data-dm="spread"], [data-dm="single"]) .d-object::before { transform: translate3d(11px, -8px, -5px); opacity: 0.6; }
-:is([data-dm="spread"], [data-dm="single"]) .d-object::after { transform: translate3d(6px, -4px, -2px); opacity: 0.9; }
 
-/* the folder's shadow on the desk */
-:is([data-dm="spread"], [data-dm="single"]) .d-shadow {
-  display: block; position: absolute; inset: 0; border-radius: 4px; pointer-events: none;
-  transform: translate3d(0, 0, -12px);
-  box-shadow:
-    2px 3px 2px -1px rgba(var(--ink-warm), 0.55), 7px 11px 14px -6px rgba(var(--ink-warm), 0.42),
-    18px 28px 42px -12px rgba(var(--ink-warm), 0.3), 0 0 30px 0 rgba(var(--ink-warm), 0.14);
+/* The folder's shadow on the desk. It is NOT part of the object: a shadow offset that rotated with the folder would
+   point somewhere else in landscape. Only the footprint follows the folder (position, scale, a quarter turn, and the
+   width of the open spread); the offsets are in screen space, so the light stays at the top left throughout. Three
+   layers: a contact shadow, a mid shadow, and the soft one that says how high the object stands. They only translate and
+   scale: painted once. */
+:is([data-dm="spread"], [data-dm="single"]) .d-ground {
+  display: block; position: absolute; left: 50%; top: calc(50% + var(--dy)); width: var(--pw); height: var(--ph);
+  margin: calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2); pointer-events: none;
+  transform: translate3d(calc(var(--pw) * var(--shift) * var(--e) + var(--tabx, 0px) * (1 - var(--a))), 0, 0) scale(var(--scale));
+  animation: d-enter 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
-:is([data-dm="spread"], [data-dm="single"]) .d-shadow::after {
-  content: ""; position: absolute; inset: 0; border-radius: 4px; box-shadow: 0 34px 70px -6px rgba(var(--ink-warm), 0.45); opacity: var(--arc);
+:is([data-dm="spread"], [data-dm="single"]) .d-gs {
+  position: absolute; inset: 0; border-radius: var(--rad); will-change: transform;
+  transform:
+    translate3d(calc((var(--ox) * (1 + var(--arc) * 0.9)) * 1px), calc((var(--oy) * (1 + var(--arc) * 0.9)) * 1px), 0)
+    translateX(calc(var(--e) * var(--shift) * var(--pw) * -1))
+    scaleX(calc(1 + 2 * var(--shift) * var(--e)))
+    rotate(var(--turn));
 }
+/* each layer is a filled shape, inset by more than its own offset so that its hard edge is always hidden under the folder,
+   and a box-shadow with a spread that brings the shadow back out past the folder's edge by the amount the layer is
+   offset: only the soft penumbra shows. (A plain box-shadow is not drawn inside its own box, and this box is offset.) */
+.d-gs-near { --ox: 3; --oy: 4; inset: 6px; background: rgba(var(--ink-warm), 0.5); box-shadow: 0 0 4px 4px rgba(var(--ink-warm), 0.5); }
+.d-gs-mid { --ox: 10; --oy: 14; inset: 18px; background: rgba(var(--ink-warm), 0.3); box-shadow: 0 0 18px 12px rgba(var(--ink-warm), 0.3); }
+.d-gs-far { --ox: 24; --oy: 36; inset: 42px; background: rgba(var(--ink-warm), 0.22); box-shadow: 0 0 52px 48px rgba(var(--ink-warm), 0.22); }
+
+/* the back board is a slab: four edge planes that catch the light when the folder tilts or turns */
+:is([data-dm="spread"], [data-dm="single"]) .d-rear { display: block; position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+.d-re { position: absolute; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.d-re-t { left: calc(var(--rad) * 0.6); right: calc(var(--rad) * 0.6); top: calc(var(--thk) / -2); height: var(--thk); transform: translateZ(calc(var(--thk) / -2)) rotateX(90deg); background: linear-gradient(to bottom, #3f3b36, #151311 40%, #090807); }
+.d-re-b { left: calc(var(--rad) * 0.6); right: calc(var(--rad) * 0.6); bottom: calc(var(--thk) / -2); height: var(--thk); transform: translateZ(calc(var(--thk) / -2)) rotateX(-90deg); background: linear-gradient(to bottom, #1f1d1a, #070606); }
+.d-re-l { top: calc(var(--rad) * 0.6); bottom: calc(var(--rad) * 0.6); left: calc(var(--thk) / -2); width: var(--thk); transform: translateZ(calc(var(--thk) / -2)) rotateY(-90deg); background: linear-gradient(to right, #34302c, #0e0d0c); }
+.d-re-r { top: calc(var(--rad) * 0.6); bottom: calc(var(--rad) * 0.6); right: calc(var(--thk) / -2); width: var(--thk); transform: translateZ(calc(var(--thk) / -2)) rotateY(90deg); background: linear-gradient(to left, #1f1d1a, #070606); }
 
 /* ---- the lid -------------------------------------------------------------------------------
    Above the pages while it is closed or nearly closed, below them once it is open (data-lidtop flips at
@@ -496,23 +556,19 @@ html:is([data-dm="spread"], [data-dm="single"]) body { height: 100%; overflow: h
 
 /* ---- the back board with the sheets in it: the right-hand page of the open folder ---------- */
 :is([data-dm="spread"], [data-dm="single"]) .d-frame {
-  position: absolute; inset: 0; z-index: var(--zf); max-width: none; margin: 0; padding: var(--bd); border-radius: 4px;
-  background: linear-gradient(158deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 32%), var(--folder);
+  position: absolute; inset: 0; z-index: var(--zf); max-width: none; margin: 0; padding: var(--bd);
   transform: translateZ(var(--zfz));
-  box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.16), inset -1px -1px 0 rgba(0, 0, 0, 0.7), 0 0 0 1px var(--folder-dk),
-    1px 1px 0 1px #1b1917, 2px 2px 0 1px #100f0d, 3px 3px 0 1px #070605;
 }
 /* the shadow the lid throws across the pages while it swings over them (a real element, see Folder.tsx) */
 :is([data-dm="spread"], [data-dm="single"]) .d-frame-shade {
-  display: block; position: absolute; inset: 0; z-index: 90; pointer-events: none; border-radius: 4px;
+  display: block; position: absolute; inset: 0; z-index: 90; pointer-events: none; border-radius: var(--rad);
   background: linear-gradient(270deg, rgba(var(--ink-warm), 0.4), rgba(var(--ink-warm), 0) 60%);
   opacity: calc(4 * var(--e) * (1 - var(--e)));
 }
 /* the physical tab: its own decorative layer above the folder edge, never inside a page */
 :is([data-dm="spread"], [data-dm="single"]) .d-frame-tab {
   display: flex; align-items: center; position: absolute; top: -1.9rem; height: 1.9rem; padding: 0 1.7rem;
-  background: var(--vermilion); color: var(--fg); opacity: var(--e); white-space: nowrap; pointer-events: none;
+  background: linear-gradient(180deg, #ff6c52, var(--vermilion) 55%, #f04d31); color: var(--fg); opacity: var(--e); white-space: nowrap; pointer-events: none;
   font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase;
   clip-path: polygon(0 100%, 7% 0, 93% 0, 100% 100%);
 }
@@ -547,7 +603,8 @@ html:is([data-dm="spread"], [data-dm="single"]) body { height: 100%; overflow: h
   -webkit-backface-visibility: hidden; backface-visibility: hidden;
 }
 :is([data-dm="spread"], [data-dm="single"]) .d-surface[data-active="false"] { visibility: hidden; pointer-events: none; }
-:is([data-dm="spread"], [data-dm="single"]) .d-surface[data-turn="moving"] { will-change: transform; pointer-events: none; }
+:is([data-dm="spread"], [data-dm="single"]) .d-surface[data-turn="moving"], :is([data-dm="spread"], [data-dm="single"]) .d-surface[data-turn="ready"] { will-change: transform; }
+:is([data-dm="spread"], [data-dm="single"]) .d-surface[data-turn="moving"] { pointer-events: none; }
 
 .d-face { position: relative; container: page / inline-size; }
 .d-back { display: none; }
@@ -583,42 +640,63 @@ html:is([data-dm="spread"], [data-dm="single"]) body { height: 100%; overflow: h
 .d-head { display: flex; flex-direction: column; gap: 0.75em; }
 .d-edu { display: flex; flex-direction: column; gap: 0.8em; }
 
-/* Two real layers on every sheet. d-dim: the page is dark and unread until its turn to be drawn. d-shade: the light
-   and shadow of the turn (the sheet darkens toward its free edge as it lifts; a passing leaf casts a shadow on
-   the page it covers). Opacity only, so both are cheap. */
+/* Layers on a sheet. None of them is repainted while a leaf moves: each is painted once and then only moves (transform) or
+   fades (opacity), on the compositor. They exist only while they are needed (display: none otherwise), and the ones that
+   animate are promoted only then (will-change), so a page at rest carries no extra layers.
+     d-dim    the page is dark and unread until its turn to be drawn (opacity)
+     d-shade  the leaf's own light: it darkens toward its free edge as it lifts (opacity), and a soft band of light slides across
+              it with the turn (a gradient painted once, translated)
+     d-cast   the shadow a leaf in the air throws on the sheet it uncovers or lands on: its edge travels with the leaf (a
+              gradient painted once, translated), darkest at the leaf's edge and soft beyond it */
 .d-dim, .d-shade, .d-cast { position: absolute; inset: 0; z-index: 6; border-radius: 2px; pointer-events: none; display: none; }
-:is([data-dm="spread"], [data-dm="single"]) :is(.d-dim, .d-shade, .d-cast) { display: block; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+:is([data-dm="spread"], [data-dm="single"]) .d-dim { display: block; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 .d-dim { background: rgb(var(--ink-warm)); }
-.d-surface[data-rv="hidden"] .d-dim { opacity: 0.58; }
-.d-surface[data-rv="running"] .d-dim { opacity: 0; transition: opacity 0.95s cubic-bezier(0.3, 0.1, 0.2, 1); }
-.d-surface[data-rv="done"] .d-dim { opacity: 0; }
-/* the leaf's own light: it darkens toward its free edge as it lifts, and a soft highlight slides across it with the turn */
-.d-shade {
-  --hl: calc(var(--t) * 120% - 10%);
-  background:
-    linear-gradient(90deg, transparent calc(var(--hl) - 24%), rgba(255, 249, 236, 0.5) calc(var(--hl) - 4%), transparent calc(var(--hl) + 14%)),
-    linear-gradient(90deg, rgba(var(--ink-warm), 0.04), rgba(var(--ink-warm), 0.5));
+.d-surface[data-rv="hidden"] .d-dim { opacity: 0.58; will-change: opacity; }
+.d-surface[data-rv="running"] .d-dim { opacity: 0; transition: opacity 0.95s cubic-bezier(0.3, 0.1, 0.2, 1); will-change: opacity; }
+:is([data-dm="spread"], [data-dm="single"]) .d-surface[data-rv="done"] .d-dim { display: none; }
+
+:is([data-dm="spread"], [data-dm="single"]) .d-surface[data-turn="moving"] .d-shade {
+  display: block; overflow: hidden; -webkit-backface-visibility: hidden; backface-visibility: hidden; will-change: opacity;
+  --hx: calc(var(--t) * 120% - 60%);
+  background: linear-gradient(90deg, rgba(var(--ink-warm), 0.04), rgba(var(--ink-warm), 0.5));
   opacity: min(1, calc(var(--sh) * 0.62));
 }
-[data-dm="spread"] .d-surface[data-side="l"] .d-shade {
-  background:
-    linear-gradient(270deg, transparent calc(var(--hl) - 24%), rgba(255, 249, 236, 0.5) calc(var(--hl) - 4%), transparent calc(var(--hl) + 14%)),
-    linear-gradient(270deg, rgba(var(--ink-warm), 0.04), rgba(var(--ink-warm), 0.5));
+.d-shade::before {
+  content: ""; position: absolute; inset: 0; will-change: transform;
+  background: linear-gradient(90deg, transparent 34%, rgba(255, 249, 236, 0.5) 50%, transparent 66%);
+  transform: translate3d(var(--hx, 0%), 0, 0);
 }
-/* the shadow a leaf in the air throws on the sheet it uncovers (or lands on): it reaches as far across as the leaf's shadow
-   does (the cosine of its turn), is darkest at the leaf's edge and soft beyond it, and travels with the turn */
-.d-cast {
-  --cov: max(0, cos(calc(var(--ct) * 180deg)));
-  background: linear-gradient(90deg, rgba(var(--ink-warm), 0.5), rgba(var(--ink-warm), 0.3) calc(var(--cov) * 100% - 16%), rgba(var(--ink-warm), 0) calc(var(--cov) * 100% + 5%));
+[data-dm="spread"] .d-surface[data-side="l"][data-turn="moving"] .d-shade {
+  --hx: calc(var(--t) * -120% + 60%);
+  background: linear-gradient(270deg, rgba(var(--ink-warm), 0.04), rgba(var(--ink-warm), 0.5));
+}
+:is([data-dm="spread"], [data-dm="single"]) .d-surface[data-cast="1"] .d-cast {
+  display: block; overflow: hidden; -webkit-backface-visibility: hidden; backface-visibility: hidden; will-change: opacity;
+  --cx: calc((max(0, cos(calc(var(--ct) * 180deg))) - 1) * 100%);
   opacity: min(1, calc(var(--cs) * 0.95));
 }
-[data-dm="spread"] .d-surface[data-side="l"] .d-cast {
-  --cov: max(0, calc(-1 * cos(calc(var(--ct) * 180deg))));
-  background: linear-gradient(270deg, rgba(var(--ink-warm), 0.5), rgba(var(--ink-warm), 0.3) calc(var(--cov) * 100% - 16%), rgba(var(--ink-warm), 0) calc(var(--cov) * 100% + 5%));
+.d-cast::before {
+  content: ""; position: absolute; inset: 0; will-change: transform;
+  background: linear-gradient(90deg, rgba(var(--ink-warm), 0.5), rgba(var(--ink-warm), 0.3) 78%, rgba(var(--ink-warm), 0) 100%);
+  transform: translate3d(var(--cx, -100%), 0, 0);
 }
-[data-dm="single"] .d-cast { --cov: max(0, cos(calc(var(--ct) * 100deg))); }
-.d-surface[data-turn="rest"] .d-shade { display: none; }
+[data-dm="spread"] .d-surface[data-side="l"][data-cast="1"] .d-cast {
+  --cx: calc((1 - max(0, calc(-1 * cos(calc(var(--ct) * 180deg))))) * 100%);
+}
+[data-dm="spread"] .d-surface[data-side="l"] .d-cast::before {
+  background: linear-gradient(270deg, rgba(var(--ink-warm), 0.5), rgba(var(--ink-warm), 0.3) 78%, rgba(var(--ink-warm), 0) 100%);
+}
 [data-dm="single"] :is(.d-dim, .d-shade, .d-cast) { transform: translateZ(1px); }
+
+/* The thickness of a leaf in the air: the pile of paper under its free edge, as a strip of layered edges. It is drawn on the
+   sheet's own layer but only while the sheet moves, and it is 4px wide, so showing and hiding it repaints a sliver, not the page. */
+:is([data-dm="spread"], [data-dm="single"]) .d-surface::after {
+  content: ""; display: none; position: absolute; top: 2px; bottom: 2px; width: 4px; pointer-events: none;
+  background: linear-gradient(90deg, #f1ebdb 0 25%, #c9c0aa 25% 50%, #f4eee0 50% 75%, #aaa28c 75%);
+}
+:is([data-dm="spread"], [data-dm="single"]) .d-surface[data-turn="moving"]::after { display: block; right: -4px; border-radius: 0 2px 2px 0; }
+[data-dm="spread"] .d-surface[data-side="l"][data-turn="moving"]::after { right: auto; left: -4px; border-radius: 2px 0 0 2px; transform: scaleX(-1); }
+
 
 /* ---- spread (desktop): a book ------------------------------------------------------------- */
 [data-dm="spread"] .d-surface { transform: rotateY(calc(var(--t) * -180deg)); }
@@ -627,19 +705,27 @@ html:is([data-dm="spread"], [data-dm="single"]) body { height: 100%; overflow: h
   transform-origin: calc(var(--pw) - var(--bd)) 50%;
   transform: rotateY(calc((1 - var(--t) * (1 - var(--lc))) * 180deg));
 }
-[data-dm="spread"] .d-surface[data-turn="rest"] { transform: none; }
-/* A leaf in the air is not a rigid board. It lifts off the stack (z), its free edge rides higher than its hinge (the skew:
-   a bow), and its edge has thickness. --bow is 0 at both ends of the turn and 1 in the middle. Only a MOVING sheet has any
-   of this: at rest the transform is dropped, so the page is flat and crisp. */
-[data-dm="spread"] .d-surface[data-turn="moving"] { --bow: calc(4 * var(--t) * (1 - var(--t))); }
+[data-dm="spread"] .d-surface[data-turn="rest"], [data-dm="spread"] .d-surface[data-turn="ready"] { transform: none; }
+/* A leaf in the air is not a rigid board. It lifts off the stack (z) and swings; three small, smooth corrections to the
+   rigid turn give it the weight of paper:
+     bow    0 at both ends of the turn and 1 in the middle: how far it stands off the stack
+     peel   the outer top corner leads: it is lifted first (the leaf is pulled by a corner), and is level again by about 70%
+     lag    +1 → -1 across the turn: the free edge trails behind the hinge while the leaf speeds up, and leads once it slows
+            down, so the sheet seems to bend and straighten without any of it being bent
+   All three are numbers derived from --t (the eased angle) on the sheet itself and none is inherited. Only a MOVING sheet has
+   any of this: at rest the transform is dropped, so the page is flat and crisp. */
+[data-dm="spread"] .d-surface[data-turn="moving"] {
+  --bow: calc(4 * var(--t) * (1 - var(--t)));
+  --lag: calc(1 - 2 * var(--t));
+  --peel: calc(min(1, var(--t) * 7) * max(0, 1 - max(0, var(--t) - 0.12) * 1.7));
+}
 [data-dm="spread"] .d-surface[data-side="r"][data-turn="moving"] {
-  transform: translate3d(0, 0, calc(var(--bow) * 28px)) rotateY(calc(var(--t) * -180deg)) skewY(calc(var(--bow) * -1.9deg));
+  transform: translate3d(0, 0, calc(var(--bow) * 24px)) rotateY(calc(var(--t) * -180deg)) rotateX(calc(var(--peel) * 1.3deg)) skewY(calc(var(--bow) * var(--lag) * -2.6deg));
 }
 [data-dm="spread"] .d-surface[data-side="l"][data-turn="moving"] {
-  transform: translate3d(0, 0, calc(var(--bow) * 28px)) rotateY(calc((1 - var(--t) * (1 - var(--lc))) * 180deg)) skewY(calc(var(--bow) * 1.9deg));
+  transform: translate3d(0, 0, calc(var(--bow) * 24px)) rotateY(calc((1 - var(--t) * (1 - var(--lc))) * 180deg)) rotateX(calc(var(--peel) * -1.3deg)) skewY(calc(var(--bow) * var(--lag) * 2.6deg));
 }
-[data-dm="spread"] .d-surface[data-side="r"][data-turn="moving"] .d-sheet { box-shadow: 1px 0 0 #ebe4d2, 2px 0 0 #d6cdb7, 3px 0 0 #bdb49d, 4px 1px 3px rgba(var(--ink-warm), 0.35); }
-[data-dm="spread"] .d-surface[data-side="l"][data-turn="moving"] .d-sheet { box-shadow: -1px 0 0 #ebe4d2, -2px 0 0 #d6cdb7, -3px 0 0 #bdb49d, -4px 1px 3px rgba(var(--ink-warm), 0.35); }
+
 /* the gutter: the paper curves down into the fold, so the inner edge of each page is a little darker */
 /* (:where keeps these weaker than the edge of a leaf in the air, above) */
 :where([data-dm="spread"] .d-surface[data-side="r"]) .d-sheet:not([data-tone]) { box-shadow: inset 1.6rem 0 1.3rem -1.2rem rgba(var(--ink-warm), 0.2); }
@@ -653,13 +739,17 @@ html:is([data-dm="spread"], [data-dm="single"]) body { height: 100%; overflow: h
 }
 
 /* ---- single (phones, portrait tablets): one page, every half-page is its own sheet ---------- */
-[data-dm="single"] .d-surface { transform-style: preserve-3d; transform: rotateY(calc(var(--t) * -100deg)); }
-[data-dm="single"] .d-surface[data-turn="rest"] { transform: none; }
+/* a sheet swings a full half turn about the spine and off the left edge of the screen: the same motion as a desktop leaf,
+   whose far side is simply out of view */
+[data-dm="single"] .d-surface { transform-style: preserve-3d; }
+[data-dm="single"] .d-surface[data-turn="rest"], [data-dm="single"] .d-surface[data-turn="ready"] { transform: none; }
 [data-dm="single"] .d-surface[data-turn="moving"] {
   --bow: calc(4 * var(--t) * (1 - var(--t)));
-  transform: translate3d(0, 0, calc(var(--bow) * 20px)) rotateY(calc(var(--t) * -100deg)) skewY(calc(var(--bow) * -2deg));
+  --lag: calc(1 - 2 * var(--t));
+  --peel: calc(min(1, var(--t) * 7) * max(0, 1 - max(0, var(--t) - 0.12) * 1.7));
+  transform: translate3d(0, 0, calc(var(--bow) * 20px)) rotateY(calc(var(--t) * -180deg)) rotateX(calc(var(--peel) * 1.2deg)) skewY(calc(var(--bow) * var(--lag) * -2.2deg));
 }
-[data-dm="single"] .d-surface[data-turn="moving"] .d-sheet { box-shadow: 1px 0 0 #ebe4d2, 2px 0 0 #d6cdb7, 3px 0 0 #bdb49d, 4px 1px 3px rgba(var(--ink-warm), 0.35); }
+
 /* the back of the sheet as it swings away: blank paper, never mirrored text */
 [data-dm="single"] .d-back {
   display: block; position: absolute; inset: 0; border: 1px solid var(--rule); border-radius: 2px;

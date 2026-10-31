@@ -32,14 +32,21 @@ import { useScrollCues } from "./ScrollCue";
  * they change. <html data-dm="..."> (set before first paint by the inline script in layout.tsx) selects:
  *
  *   spread  desktop: two pages visible at once, like an open book.
- *   single  phones / portrait tablets: one page visible, every half-page turns as its own sheet.
+ *   single  phones / portrait tablets: one page visible, every half-page turns as its own sheet. The folder is the same
+ *           object as on the desktop: it starts closed and lying in landscape and turns upright on the first step.
+ *
+ * Cost per frame. A turn must not repaint anything: the moving sheet is a ready-made layer (data-turn="ready" is set
+ * on the sheets that can move next, one step ahead, so the layer and its raster exist before the first frame), and
+ * everything that changes while it moves is a transform or an opacity (see globals.css). The engine only touches the
+ * sheets near the motion that is playing, and evaluates only the leaves that are in the air.
  *   static  reduced motion, the "Plain view" button, or a window too short for a page: the plain edition.
  */
 
 const MIN_FIT = { spread: 0.72, single: 0.8 } as const;
 const SETTLE_MS = 160; // the page sits still before anything is drawn on it
 const GAP_MS = 180; // between the left page finishing and the right page starting
-const TURN_MS = { spread: 1150, single: 950 } as const;
+const TURN_MS = { spread: 1250, single: 900 } as const;
+const PREROLL_FRAMES = 2; // the sheets about to move get their layers and raster before the first frame of the motion
 const MOTION_MS = { rotate: 950, open: 1250, close: 1250 } as const;
 const HINT_REST_MS = 3500;
 
@@ -72,8 +79,12 @@ function bezier(x1: number, y1: number, x2: number, y2: number) {
     return sy(clamp(t));
   };
 }
-/** Paper: it peels away slowly, swings through the middle, and comes to rest with a long, soft landing. No overshoot. */
-const turnEase = bezier(0.5, 0.04, 0.16, 1);
+/**
+ * Paper: it is lifted gently, swings through the vertical at a moderate speed and comes to rest with a long, soft landing.
+ * No overshoot. (Peak speed is 1.9x the average; the previous curve peaked at 3.2x and was 78% turned at half time, so
+ * the page snapped through the vertical.)
+ */
+const turnEase = bezier(0.34, 0.02, 0.4, 1);
 
 function detectMode(): Mode {
   const reduced = window.matchMedia(REDUCED_QUERY).matches;
@@ -286,6 +297,7 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
     let idx = 0;
     let heading = 0;
     let u = 0;
+    let lastU = -1;
     let raf = 0;
     let scrolled = false;
     let hintTimer = 0;
@@ -314,8 +326,16 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
     const setReveal = (s: number, v: "hidden" | "running" | "done") => setAttr(surfaces[s], "data-rv", v);
 
     // ---- physical state, as a pure function of u --------------------------------------------
-    const update = () => {
-      const ra = layout === "single" ? 1 : ramp(u, tl.rotateIn) - ramp(u, tl.rotateOut);
+    const turns = tl.turns;
+    const leafCache = new Float32Array(turns.length);
+    let hotLo = 0;
+    let hotHi = SURFACES - 1;
+    const forced = new Set<number>(); // sheets shown a few frames early (see begin) so their layers exist before they move
+    const readyFlags = new Uint8Array(SURFACES);
+    const bd = document.querySelector<HTMLElement>(".bd");
+
+    const update = (full = false) => {
+      const ra = ramp(u, tl.rotateIn) - ramp(u, tl.rotateOut);
       const op = ramp(u, tl.open) - ramp(u, tl.close);
       const e = ease(op);
       const sRa = ra.toFixed(4);
@@ -329,12 +349,30 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
       setAttr(root, "data-end", u >= tl.end - 0.02 ? "1" : "0");
 
       // Each leaf's angle is the eased turn itself (the CSS uses it directly), so the curve above is what you see.
-      const t = tl.turns.map((span) => turnEase(ramp(u, span)));
-      const leaf = (k: number) => (k >= 0 && k < t.length ? t[k] : 0);
+      // Only a leaf that is in the air needs the curve; the others are 0 (not yet turned) or 1 (turned).
+      const leaf = (k: number) => {
+        if (k < 0 || k >= turns.length) return 0;
+        const span = turns[k];
+        if (u <= span.a) return 0;
+        if (u >= span.b) return 1;
+        const c = leafCache[k];
+        if (c >= 0 && lastU === u) return c;
+        return (leafCache[k] = turnEase((u - span.a) / (span.b - span.a)));
+      };
+      if (lastU !== u) {
+        leafCache.fill(-1);
+        lastU = u;
+      }
       const lift = (k: number) => 4 * leaf(k) * (1 - leaf(k)); // 0 -> 1 -> 0 while a leaf is in the air
       const closed = op <= 0.001;
 
-      surfaces.forEach((el, s) => {
+      // the desk answers to the pose of the folder: 0 closed and lying down, 1 open (only changes while it rotates or opens)
+      if (bd) setVar(bd, "--pose", clamp(ra * 0.4 + e * 0.6).toFixed(3));
+
+      const from = full ? 0 : hotLo;
+      const to = full ? SURFACES - 1 : hotHi;
+      for (let s = from; s <= to; s++) {
+        const el = surfaces[s];
         const page = s >> 1;
         const left = (s & 1) === 0;
         let own: number; // this surface's own turn / landing progress
@@ -369,6 +407,7 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
           castT = s > 0 ? leaf(s - 1) : 0;
         }
 
+        if (forced.has(s)) visible = true;
         setVar(el, "--t", own.toFixed(4));
         // the shade element carries its own numbers (they are not inherited): the sheet's own lift and the shadow of a passing leaf
         setVar(shades[s], "--sh", (4 * own * (1 - own)).toFixed(4));
@@ -378,9 +417,35 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
         setVar(casts[s], "--ct", castT.toFixed(4));
         if (layout === "spread" && left) setVar(el, "--lc", lc.toFixed(4));
         setAttr(el, "data-active", visible ? "true" : "false");
-        // only a sheet that is actually on show and in motion is "moving" (it alone gets a compositor layer)
-        setAttr(el, "data-turn", visible && !rest ? "moving" : "rest");
-      });
+        // "moving": on show and in motion. "ready": can move on the next step, so it already is a layer (it is also what a
+        // sheet is right after it lands, so it keeps its layer instead of being repainted into its parent). Nothing else
+        // is promoted.
+        setAttr(el, "data-turn", visible && !rest ? "moving" : readyFlags[s] ? "ready" : "rest");
+        // a sheet only carries the shadow layer while a leaf is casting on it
+        setAttr(el, "data-cast", cast > 0.001 ? "1" : "0");
+      }
+    };
+
+    /** The sheets that can move on the next step, forwards or back (see data-turn above). */
+    const markReady = (i: number, also?: number) => {
+      readyFlags.fill(0);
+      const add = (state: number) => {
+        const [a, b] = layout === "spread" ? [2 * state - 3, 2 * state] : [state - 2, state];
+        for (let s = Math.max(0, a); s <= Math.min(SURFACES - 1, b); s++) readyFlags[s] = 1;
+      };
+      if (i > 0 && i < END) add(i);
+      if (also !== undefined && also > 0 && also < END) add(also);
+    };
+    /** Decode the screenshots of the sheets that come next, while the visitor is reading, so a turn never waits for one. */
+    let warmTimer = 0;
+    const warm = (i: number) => {
+      window.clearTimeout(warmTimer);
+      warmTimer = window.setTimeout(() => {
+        for (const state of [i, i + 1]) {
+          const list = arrivalSurfaces(state);
+          list.forEach((s) => sheets[s]?.querySelectorAll("img").forEach((img) => img.decode?.().catch(() => {})));
+        }
+      }, 600);
     };
 
     // ---- reveal: left page first, then the right, only once everything is at rest -------------
@@ -419,6 +484,7 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
       if (idx <= 0 || idx >= END) scrolled = false;
       const shown = phase === "turning" ? heading : idx;
       setAttr(root, "data-phase", phase);
+      setAttr(html, "data-turning", phase === "turning" ? "1" : "0"); // the desk stops moving while a leaf is in the air
       syncHint();
       setUi((c) => (
         c.idx === idx && c.shown === shown && c.busy === busy && c.last === END
@@ -460,6 +526,7 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
     const play = (list: Motion[], dir: 1 | -1, done: () => void) => {
       let k = 0;
       let t0 = 0;
+      let pre = PREROLL_FRAMES;
       const stepMotion = (now: number) => {
         const m = list[k];
         if (!t0) t0 = now;
@@ -475,7 +542,13 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
           done();
         }
       };
-      raf = requestAnimationFrame(stepMotion);
+      // Pre-roll: u has not moved yet, but the sheets about to move are on show and promoted, so their layers are
+      // rasterised before the first frame that changes anything.
+      const wait = () => {
+        if (--pre > 0) raf = requestAnimationFrame(wait);
+        else raf = requestAnimationFrame(stepMotion);
+      };
+      raf = requestAnimationFrame(wait);
     };
 
     const begin = (dir: 1 | -1) => {
@@ -491,12 +564,22 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
       if (!list.length) return;
       if (from > 0 && from < END) scrolled = true;
       heading = to;
+      // only the sheets near this motion are evaluated while it plays
+      hotLo = Math.max(0, (layout === "spread" ? 2 * (Math.min(from, to) - 1) : Math.min(from, to) - 1) - 4);
+      hotHi = Math.min(SURFACES - 1, (layout === "spread" ? 2 * (Math.max(from, to) - 1) + 1 : Math.max(from, to) - 1) + 5);
+      markReady(from, to);
+      forced.clear();
+      if (dir > 0) arrivalSurfaces(to).forEach((s) => forced.add(s));
+      update();
       phase = "turning";
       commit();
       play(list, dir, () => {
         idx = to;
         u = states[to];
+        forced.clear();
+        markReady(to);
         update();
+        warm(to);
         phase = "settling";
         commit();
         later(() => startReveals(to), SETTLE_MS);
@@ -515,7 +598,9 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
       u = states[0];
       surfaces.forEach((_, s) => setReveal(s, "hidden"));
       phase = "idle";
-      update();
+      forced.clear();
+      markReady(0);
+      update(true);
       commit();
     };
 
@@ -539,7 +624,10 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
       surfaces.forEach((_, s) => setReveal(s, "hidden"));
       arrivalSurfaces(idx).forEach((s) => setReveal(s, "done"));
       phase = "idle";
-      update();
+      forced.clear();
+      markReady(idx);
+      update(true);
+      warm(idx);
       commit();
     };
 
@@ -684,6 +772,7 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
       engineRef.current = null;
       cancelAnimationFrame(raf);
       window.clearTimeout(hintTimer);
+      window.clearTimeout(warmTimer);
       cancelAnimationFrame(tiltRaf);
       clearTimers();
       window.clearTimeout(fitTimer);
@@ -697,6 +786,8 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
       window.removeEventListener("resize", fitLater);
       window.removeEventListener("pointermove", onMove);
       html.removeAttribute("data-engine");
+      html.removeAttribute("data-turning");
+      bd?.style.removeProperty("--pose");
       // Hand everything back to CSS: remove whatever the engine wrote.
       ["--pw", "--ph", "--ls", "--dip", "--dy"].forEach((n) => root.style.removeProperty(n));
       drivers.forEach((el) => ["--ra", "--op", "--tx", "--ty"].forEach((n) => el.style.removeProperty(n)));
@@ -706,6 +797,7 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
         el.setAttribute("data-active", "false");
         el.setAttribute("data-rv", "done");
         el.removeAttribute("data-turn");
+        el.removeAttribute("data-cast");
       });
       sheets.forEach((sheet) => {
         sheet.style.removeProperty("--fit");
@@ -755,6 +847,13 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
           {/* the folder (animated presentations) */}
           <div className="d-track" ref={trackRef}>
             <div className="d-stage">
+              {/* the folder's shadow on the desk. It sits OUTSIDE the object so that the light stays where it is (top left)
+                  while the folder turns: only the footprint follows the folder, the offset never rotates. */}
+              <div className="d-ground" data-drive aria-hidden="true">
+                <span className="d-gs d-gs-far" data-drive />
+                <span className="d-gs d-gs-mid" data-drive />
+                <span className="d-gs d-gs-near" data-drive />
+              </div>
               <div
                 className="d-object"
                 ref={objectRef}
@@ -766,7 +865,14 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
                   go("next");
                 }}
               >
-                <span className="d-shadow" data-drive aria-hidden="true" />
+                {/* the rear board is a real slab: four edge planes that catch the light when the folder tilts or turns */}
+                <span className="d-rear" aria-hidden="true">
+                  <i className="d-re d-re-t" />
+                  <i className="d-re d-re-r" />
+                  <i className="d-re d-re-b" />
+                  <i className="d-re d-re-l" />
+                </span>
+                <span className="d-stackpaper" aria-hidden="true" />
                 <div className="d-cover-wrap">{cover}</div>
                 <div className="d-frame" data-drive>
                   <span className="d-frame-shade" data-drive aria-hidden="true" />
