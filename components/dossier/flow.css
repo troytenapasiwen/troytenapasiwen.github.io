@@ -13,7 +13,7 @@
   box-shadow: 0.45em 0.45em 0 var(--vermilion);
   margin-right: 0.45em; margin-bottom: 0.45em;
 }
-.fx { display: block; flex: 1 1 0; min-height: 0; width: 100%; height: 0; overflow: visible; }
+.fx { display: block; flex: 1 1 0; min-height: 0; width: 100%; height: 0; overflow: hidden; }
 .fx-cap {
   flex: none; display: flex; justify-content: space-between; gap: 1em; padding: 0.55em 0.9em 0.65em;
   border-top: 1px solid rgba(246, 241, 231, 0.22);
@@ -22,60 +22,71 @@
 }
 .fx-cap span:first-child { color: var(--vermilion); }
 
-/* the drawing's ink (SVG presentation attributes lose to these, which is the point) */
-.fx-ink { stroke: var(--folder-ink); }
-.fx-acc { stroke: var(--vermilion); }
-.fx-accf { fill: var(--vermilion); }
-.fx-accfill { fill: var(--vermilion); stroke: none; }
-.fx-solid { fill: var(--folder-ink); stroke: none; }
-.fx-soft { opacity: 0.55; }
+/* ink on the objects (SVG presentation attributes lose to these, which is the point). Objects are ivory and sand with
+   black ink on their faces; the drawing's own marks on the floor are ivory. */
+.sx-ink { stroke: #1c1a18; fill: none; }
+.sx-inkf { fill: #1c1a18; stroke: none; }
+.sx-lt { stroke: #f6f1e7; fill: none; }
+.sx-acc, .fx-acc { stroke: var(--vermilion); }
+.sx-accf, .fx-accf { fill: var(--vermilion); }
+.sx-soft { opacity: 0.55; }
 .fx-guide { stroke: rgba(246, 241, 231, 0.4); }
 .fx-crop { stroke: rgba(246, 241, 231, 0.5); }
-.fx-handle { fill: var(--folder); stroke: var(--vermilion); stroke-width: 1.2; }
-.fx-cursor { fill: var(--folder-ink); stroke: var(--folder); }
-.fx-anchor { fill: var(--folder); stroke: var(--folder-ink); stroke-width: 1.4; }
+.fx-handle { fill: #fbf7ee; stroke: var(--vermilion); stroke-width: 1.2; }
+.fx-cursor { fill: #fbf7ee; stroke: #0f0e0d; }
 .fx-pulse { stroke: var(--vermilion); opacity: 0; transform-box: fill-box; transform-origin: center; }
 .fx-mono { font: 500 9px var(--font-plex-mono), ui-monospace, monospace; letter-spacing: 0.04em; }
-.fx-aa { font: 400 30px var(--font-archivo), "Arial Black", sans-serif; fill: var(--folder-ink); }
-.fx-sw-ivory { fill: var(--folder-ink); }
-.fx-sw-vermilion { fill: var(--vermilion); }
-.fx-sw-line { stroke: var(--folder-ink); }
+.fx-aa { font: 400 30px var(--font-archivo), "Arial Black", sans-serif; }
 .fx-ghost { fill: var(--vermilion); }
 .fx-snap { fill: rgba(255, 89, 61, 0.16); stroke: var(--vermilion); stroke-width: 1.5; opacity: 0; }
 .fx-slot { stroke: var(--vermilion); }
-.fx-layer { stroke: rgba(246, 241, 231, 0.3); }
-.fx-cell { fill: none; stroke-width: 1; }
-.fx-cell-hot { fill: var(--vermilion); stroke: none; }
+.fx-layer { fill: transparent; stroke: transparent; }
+.fx-cell-hot { fill: var(--vermilion); }
 .fx-caret { fill: var(--vermilion); }
 .fx-flow, .fx-flow-mk { fill: var(--vermilion); }
 .fx-publish-ring { transform-box: fill-box; transform-origin: center; }
-.fx-draw { stroke-dasharray: 1 1; stroke-dashoffset: 0; }
 .fx-tick { stroke-dasharray: 1 1; stroke-dashoffset: 0; }
-.fx-type, .fx-pop, .fx-draw, .fx-snap, .fx-ghost { transform-box: fill-box; }
+.fx-type, .fx-snap { transform-box: fill-box; }
 .fx-type { transform-origin: 0 50%; }
+.sx-draw { stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+.sx-shadow { transform-box: fill-box; transform-origin: 0 50%; }
 
-/* ---------------------------------------------------------------- the drawing-in -------------
-   While the sheet is being written the lines are drawn in the order of --i; the engine ends the writing after the
-   time reserved by .fx-hold, so all of this has finished before the sheet is marked done. A sheet that is done, and any
-   page where the engine is not running, simply shows the finished drawing. */
-html[data-engine] .d-surface[data-rv="hidden"] .fx-draw { stroke-dashoffset: 1; transition: none; }
-html[data-engine] .d-surface[data-rv="hidden"] .fx-pop { opacity: 0; transition: none; }
+/* ---------------------------------------------------------------- the rise ------------------
+   An object comes up out of the page. Its ground line is a clip (see solids.tsx), so it is hidden below the line, then:
+     1. its contact shadow appears on the floor,
+     2. the body travels up through the ground line (it settles with a hair of overshoot, no bounce),
+     3. the parts set onto it (.sx-pop) arrive one after another, and its lines are drawn.
+   The whole of it fits in the 1.9s the engine reserves for a plate (.fx-hold). A sheet that is done, and any page where the
+   engine is not running, simply shows the finished objects. */
+html[data-engine] .d-surface[data-rv="hidden"] .sx-rise { transform: translateY(calc(var(--h, 120) * 1px)); transition: none; }
+html[data-engine] .d-surface[data-rv="hidden"] .sx-shadow { opacity: 0; transform: scaleX(0.5); transition: none; }
+html[data-engine] .d-surface[data-rv="hidden"] .sx-pop { opacity: 0; translate: 0 5px; transition: none; }
+html[data-engine] .d-surface[data-rv="hidden"] .sx-draw { stroke-dashoffset: 1; opacity: 0; transition: none; }
 html[data-engine] .d-surface[data-rv="hidden"] .fx-type { transform: scaleX(0); transition: none; }
-html[data-engine] .d-surface[data-rv="running"] .fx-draw {
-  transition: stroke-dashoffset 0.75s cubic-bezier(0.4, 0.05, 0.2, 1) calc(120ms + var(--i, 0) * 55ms);
+html[data-engine] .d-surface[data-rv="hidden"] .write-fade { opacity: 0; transition: none; }
+
+html[data-engine] .d-surface[data-rv="running"] .sx-shadow {
+  transition: opacity 0.55s ease calc(120ms + var(--i, 0) * 45ms), transform 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) calc(120ms + var(--i, 0) * 45ms);
 }
-html[data-engine] .d-surface[data-rv="running"] .fx-pop {
-  transition: opacity 0.5s ease calc(220ms + var(--i, 0) * 55ms);
+html[data-engine] .d-surface[data-rv="running"] .sx-rise {
+  transition: transform 0.95s cubic-bezier(0.22, 1, 0.28, 1.04) calc(380ms + var(--i, 0) * 45ms);
+}
+html[data-engine] .d-surface[data-rv="running"] .sx-pop {
+  transition: opacity 0.5s ease calc(620ms + var(--i, 0) * 50ms), translate 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) calc(620ms + var(--i, 0) * 50ms);
+}
+html[data-engine] .d-surface[data-rv="running"] .sx-draw {
+  opacity: 1; transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0.05, 0.2, 1) calc(560ms + var(--i, 0) * 45ms), opacity 0.2s ease calc(560ms + var(--i, 0) * 45ms);
 }
 html[data-engine] .d-surface[data-rv="running"] .fx-type {
-  transition: transform 0.6s steps(14, end) calc(160ms + var(--i, 0) * 55ms);
+  transition: transform 0.6s steps(14, end) calc(700ms + var(--i, 0) * 40ms);
 }
+html[data-engine] .d-surface[data-rv="running"] .write-fade { transition: opacity 0.4s ease; }
 /* reserves the drawing time (the engine reads --dl / --du of every .write on the sheet); never shown */
 .fx-hold { display: none; }
 
 /* ---------------------------------------------------------------- ambient loops ---------------
    Only on a sheet that is finished AND on show, so nothing here runs on pages that are turned away or while a leaf is
-   moving. Slow and quiet: they suggest that the drawing is being worked on, they do not compete with the text. */
+   moving. Slow and quiet: only a few chosen parts move (a selection, a cursor, a flow marker, a caret), the objects stay put. */
 .d-surface[data-rv="done"][data-active="true"] .fx-loop-sel { animation: fx-sel 9s cubic-bezier(0.6, 0, 0.3, 1) infinite; }
 .d-surface[data-rv="done"][data-active="true"] .fx-pulse { animation: fx-pulse 4.4s ease-out infinite; }
 .d-surface[data-rv="done"][data-active="true"] .fx-pulse-1 { animation-delay: 1.1s; }
@@ -205,3 +216,9 @@ html[data-engine] .d-surface[data-rv="running"] .fx-type {
 }
 :is([data-dm="spread"], [data-dm="single"]) .d-sheet[data-overflow] .d-body[data-scrolled]::after { opacity: 0; animation: none; }
 @keyframes fx-more-bob { 0%, 100% { background-position: center calc(100% - 0.55em), 0 0; } 50% { background-position: center calc(100% - 0.85em), 0 0; } }
+
+/* ---------------------------------------------------------------- spots (see spots.tsx) -----------
+   Small objects in the free space of a spread. Flex item with no basis and no minimum: it takes what is left, up to a
+   maximum, and gives it all back when the text needs the room. */
+.sp { position: relative; flex: 1 1 0; min-height: 0; max-height: min(15em, 36cqh); width: 100%; margin-top: 0.4em; pointer-events: none; }
+.sp-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }

@@ -70,6 +70,7 @@ export default function Page({
       </div>
       <span className="d-dim" aria-hidden="true" />
       <span className="d-shade" aria-hidden="true" />
+      <span className="d-cast" aria-hidden="true" />
       <div className="d-back" aria-hidden="true" />
     </section>
   );

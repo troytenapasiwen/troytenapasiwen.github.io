@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { Mail } from "lucide-react";
 import Page from "../Page";
+import Spot from "../spots";
 import Write, { Rule, timing } from "../Write";
 import { sequence } from "../sequence";
 import { GitHubIcon, LinkedInIcon } from "@/components/ui/BrandIcons";
@@ -65,6 +66,7 @@ export default function ContactPage() {
               Back to the cover
             </a>
           </Write>
+          <Spot kind="envelope" align="right" />
         </div>
       }
     />

@@ -226,6 +226,7 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
     );
     const sheets = surfaces.map((el) => el.querySelector<HTMLElement>(".d-sheet")!);
     const shades = surfaces.map((el) => el.querySelector<HTMLElement>(".d-shade")!);
+    const casts = surfaces.map((el) => el.querySelector<HTMLElement>(".d-cast")!);
 
     // ---- fit: a sheet never clips or overlaps its text --------------------------------------
     // Each half-page is measured in its real layout. If its body is taller than the room it has between
@@ -340,6 +341,7 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
         let visible: boolean;
         let rest: boolean;
         let cast = 0; // shadow thrown on this sheet by the leaf moving over it
+        let castT = 0; // how far that leaf has turned (0 -> 1): the shadow travels with it
         let lc = 0; // how far the lid has closed over a page that lies on it
 
         if (layout === "spread") {
@@ -349,12 +351,14 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
             lc = page === 0 ? 0 : 1 - e;
             rest = own >= 1 && lc <= 0;
             cast = page < last ? lift(page) : 0;
+            castT = page < last ? leaf(page) : 0;
           } else {
             own = leaf(page);
             const uncovered = page === 0 ? op : leaf(page - 1);
             visible = !closed && uncovered > 0 && (own < 1 || page === last);
             rest = own <= 0;
             cast = page > 0 ? lift(page - 1) : 0;
+            castT = page > 0 ? leaf(page - 1) : 0;
           }
         } else {
           own = leaf(s);
@@ -362,12 +366,16 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
           visible = !closed && uncovered > 0 && (own < 1 || s === SURFACES - 1);
           rest = own <= 0;
           cast = s > 0 ? lift(s - 1) : 0;
+          castT = s > 0 ? leaf(s - 1) : 0;
         }
 
         setVar(el, "--t", own.toFixed(4));
         // the shade element carries its own numbers (they are not inherited): the sheet's own lift and the shadow of a passing leaf
         setVar(shades[s], "--sh", (4 * own * (1 - own)).toFixed(4));
-        setVar(shades[s], "--cs", cast.toFixed(4));
+        setVar(shades[s], "--t", own.toFixed(4)); // the highlight on a turning leaf travels with its turn
+        // the shadow of a passing leaf is its own layer: how strong (--cs) and how far across the sheet it reaches (--ct)
+        setVar(casts[s], "--cs", cast.toFixed(4));
+        setVar(casts[s], "--ct", castT.toFixed(4));
         if (layout === "spread" && left) setVar(el, "--lc", lc.toFixed(4));
         setAttr(el, "data-active", visible ? "true" : "false");
         // only a sheet that is actually on show and in motion is "moving" (it alone gets a compositor layer)
@@ -703,7 +711,8 @@ export default function Dossier({ cover, plain: plainEdition, children }: { cove
         sheet.style.removeProperty("--fit");
         sheet.removeAttribute("data-overflow");
       });
-      shades.forEach((el) => ["--sh", "--cs"].forEach((n) => el.style.removeProperty(n)));
+      shades.forEach((el) => ["--sh", "--t"].forEach((n) => el.style.removeProperty(n)));
+      casts.forEach((el) => ["--cs", "--ct"].forEach((n) => el.style.removeProperty(n)));
     };
   }, [mode, ready]);
 

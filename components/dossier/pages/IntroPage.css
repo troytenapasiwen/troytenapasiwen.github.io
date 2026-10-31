@@ -1,31 +1,93 @@
-/* Introduction portrait. The photograph is a true 4:5 portrait, so it is shown at that shape (the old frame cut it
-   to a square and cropped the shoulders). Its width follows the height of the page, so it grows as far as the sheet
-   allows and never pushes the text or the footer. Sizes use em/rem so the sheet's own fit scaling still applies. */
-.ip-stage { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
-.ip-frame {
-  position: relative;
-  /* page height minus header, footer and padding; 0.8 = the 4:5 ratio */
-  width: min(calc(100% - 0.9em), calc((100cqh - 11.5rem) * 0.8));
-  min-width: 9em;
-  aspect-ratio: 4 / 5;
-  margin: 0 0.9em 0.9em 0;
-}
-.ip-frame { flex: none; }
-.ip-frame::before {
-  /* the vermilion plate behind the photo: the folder's existing accent, as one clean offset block */
-  content: ""; position: absolute; inset: 0; transform: translate(0.9em, 0.9em); background: var(--vermilion);
-}
-.ip-image {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; object-position: 50% 14%;
-  border: 2px solid var(--fg); background: var(--paper-2, #e9e3d3);
-}
-.ip-label {
-  position: absolute; left: 0; bottom: 0; z-index: 1; display: flex; flex-direction: column; gap: 0.1em;
-  padding: 0.55em 0.9em 0.6em; background: var(--folder); color: var(--folder-ink); line-height: 1.25;
-}
-.ip-label span:first-child { font-weight: 700; font-size: 0.95em; }
-.ip-label span:last-child { font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.7em; letter-spacing: 0.12em; text-transform: uppercase; color: var(--folder-mute); }
+/* ==========================================================================================
+   Introduction spread.
+   Left: the greeting, the waving hand and the name. Right: the portrait, mounted like a physical print.
+   Sizes use em/rem so the sheet's own fit scaling still applies. Motion: transform / opacity only, and only while the sheet is
+   being drawn (data-rv="running"); a finished sheet is flat and static.
+   ========================================================================================== */
 
-/* single-page (phone) layout: the page is portrait, so width is the limit, not height */
-[data-dm="single"] .ip-frame { width: min(calc(100% - 0.9em), calc((100cqh - 9.5rem) * 0.8)); }
+/* ---- left sheet ------------------------------------------------------------------------- */
+.ip-copy { gap: 0.8em; }
+.ip-eyebrow {
+  display: flex; align-items: center; gap: 0.9em; margin: 0; font-family: var(--font-plex-mono), ui-monospace, monospace; font-weight: 500;
+  font-size: 0.8em; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent);
+}
+.ip-eyebrow::after { content: ""; width: 3.2em; height: 3px; background: var(--vermilion); }
+.ip-greet { display: flex; align-items: flex-end; gap: 0.5em; margin: 0.2em 0 -0.2em; }
+.ip-hi {
+  margin: 0; font-family: var(--font-dm-sans), system-ui, sans-serif; font-weight: 700; font-size: 1.9em; line-height: 1; letter-spacing: -0.02em;
+  padding-bottom: 0.12em;
+}
+.ip-hand { flex: none; width: 3.4em; height: auto; overflow: visible; margin-bottom: -0.2em; }
+.ip-hand-wave { transform-origin: 54% 83%; }
+.ip-name { font-size: clamp(2.1em, 13.4cqw, 4.5em); }
+.ip-next svg { transition: translate 0.25s ease; }
+
+/* the hand comes up with a small upward motion, then waves once from the wrist */
+html[data-engine] .d-surface[data-rv="hidden"] .ip-hand { opacity: 0; translate: 0 0.7em; scale: 0.88; transition: none; }
+html[data-engine] .d-surface[data-rv="running"] .ip-hand {
+  opacity: 1; translate: 0 0; scale: 1;
+  transition: opacity 0.4s ease 480ms, translate 0.75s cubic-bezier(0.2, 0.9, 0.25, 1.12) 480ms, scale 0.75s cubic-bezier(0.2, 0.9, 0.25, 1.12) 480ms;
+}
+html[data-engine] .d-surface:not([data-rv="hidden"]) .ip-hand-wave { animation: ip-wave 1.5s ease-in-out 1s 1 both; }
+@keyframes ip-wave {
+  0%, 100% { transform: rotate(0deg); }
+  16% { transform: rotate(-15deg); }
+  32% { transform: rotate(13deg); }
+  48% { transform: rotate(-12deg); }
+  64% { transform: rotate(9deg); }
+  80% { transform: rotate(-4deg); }
+}
+
+/* ---- right sheet: the mounted print ------------------------------------------------------
+   Back to front: contact shadow on the sheet, a vermilion backing plate with visible thickness (offset and a hair off
+   square), the ivory mat with layered edges, the photograph in its own inner mat, black photo corners, small labels. */
+.ip-stage { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; perspective: 1500px; }
+.ip-mount {
+  position: relative; flex: none; margin: 0 0.9em 0.9em 0;
+  /* page height minus header, footer and padding; 0.8 = the 4:5 ratio */
+  width: min(calc(100% - 0.9em), calc((100cqh - 11.5rem) * 0.8)); min-width: 9em; aspect-ratio: 4 / 5;
+  transform: rotateY(-3.2deg) rotateX(1.6deg); transform-origin: 40% 60%;
+}
+[data-dm="single"] .ip-mount { width: min(calc(100% - 0.9em), calc((100cqh - 9.5rem) * 0.8)); transform: none; }
+
+.ip-shadow {
+  position: absolute; inset: 5% 2% 0 6%; transform: translate(0.6em, 1.1em); border-radius: 2px;
+  box-shadow: 0 1.6em 1.3em -0.9em rgba(var(--ink-warm), 0.65), 0 0.35em 0.5em -0.2em rgba(var(--ink-warm), 0.5);
+}
+.ip-back {
+  position: absolute; inset: 0; transform: translate(0.9em, 0.9em) rotate(1.1deg); transform-origin: 0 100%; background: var(--vermilion);
+  box-shadow: 1px 1px 0 #e04a2e, 2px 2px 0 #c93d22, 3px 3px 0 #a8321b, inset 1px 1px 0 rgba(255, 255, 255, 0.35);
+}
+.ip-mat {
+  position: absolute; inset: 0; margin: 0; padding: 0.85em 0.85em 3.7em; background: linear-gradient(135deg, #fffdf8, #f1eadb);
+  box-shadow: 0 0 0 1px rgba(var(--ink-warm), 0.22), 1px 1px 0 1px #e6dec9, 2px 2px 0 1px #d4ccb6, 3px 3px 0 1px #bfb69e, inset 1px 1px 0 #fff;
+}
+.ip-photo {
+  position: relative; width: 100%; height: 100%;
+  box-shadow: 0 0 0 0.3em #f3ecda, 0 0 0 calc(0.3em + 1px) rgba(var(--ink-warm), 0.28), inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.ip-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 14%; background: var(--paper-2, #e9e3d3); }
+.ip-corner { position: absolute; width: 1.15em; height: 1.15em; background: var(--folder); }
+.ip-corner-tl { left: 0; top: 0; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.ip-corner-tr { right: 0; top: 0; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+.ip-corner-bl { left: 0; bottom: 0; clip-path: polygon(0 0, 0 100%, 100% 100%); }
+.ip-corner-br { right: 0; bottom: 0; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+.ip-label { position: absolute; left: 0.85em; right: 0.85em; bottom: 0.7em; display: flex; flex-direction: column; gap: 0.1em; line-height: 1.25; color: var(--fg); }
+.ip-label span:first-child { font-weight: 700; font-size: 0.95em; }
+.ip-label span:last-child { font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.66em; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.ip-reg { position: absolute; right: 0.28em; top: 0.28em; width: 0.5em; height: 0.5em; background: linear-gradient(var(--vermilion), var(--vermilion)) 50% 0 / 1px 100% no-repeat, linear-gradient(var(--vermilion), var(--vermilion)) 0 50% / 100% 1px no-repeat; }
+.ip-tech { position: absolute; right: 0.85em; bottom: 0.75em; font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.6em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+
+/* the print is mounted in order: shadow, plate, mat, photograph, corners, labels (about 1.7s in all) */
+html[data-engine] .d-surface[data-rv="hidden"] :is(.ip-shadow, .ip-back, .ip-mat, .ip-corner, .ip-label, .ip-tech, .ip-reg) { opacity: 0; transition: none; }
+html[data-engine] .d-surface[data-rv="hidden"] .ip-back { translate: -0.6em -0.9em; }
+html[data-engine] .d-surface[data-rv="hidden"] .ip-mat { translate: 0 1.1em; scale: 0.975; }
+html[data-engine] .d-surface[data-rv="hidden"] .ip-image { clip-path: inset(0 0 100% 0); transition: none; }
+html[data-engine] .d-surface[data-rv="hidden"] .ip-corner { scale: 1.8; }
+html[data-engine] .d-surface[data-rv="hidden"] :is(.ip-label, .ip-tech) { translate: 0.35em 0; }
+html[data-engine] .d-surface[data-rv="running"] .ip-shadow { opacity: 1; transition: opacity 0.7s ease 100ms; }
+html[data-engine] .d-surface[data-rv="running"] .ip-back { opacity: 1; translate: 0 0; transition: opacity 0.4s ease 250ms, translate 0.8s cubic-bezier(0.2, 0.85, 0.2, 1) 250ms; }
+html[data-engine] .d-surface[data-rv="running"] .ip-mat { opacity: 1; translate: 0 0; scale: 1; transition: opacity 0.45s ease 450ms, translate 0.9s cubic-bezier(0.22, 1, 0.28, 1.04) 450ms, scale 0.9s cubic-bezier(0.22, 1, 0.28, 1) 450ms; }
+html[data-engine] .d-surface[data-rv="running"] .ip-image { clip-path: inset(0 0 0 0); transition: clip-path 0.9s cubic-bezier(0.3, 0.05, 0.2, 1) 760ms; }
+html[data-engine] .d-surface[data-rv="running"] .ip-corner { opacity: 1; scale: 1; transition: opacity 0.3s ease 1450ms, scale 0.4s cubic-bezier(0.3, 1.2, 0.4, 1) 1450ms; }
+html[data-engine] .d-surface[data-rv="running"] :is(.ip-label, .ip-tech, .ip-reg) { opacity: 1; translate: 0 0; transition: opacity 0.5s ease 1500ms, translate 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 1500ms; }

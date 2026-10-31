@@ -1,17 +1,17 @@
 import Page from "../Page";
-import Write from "../Write";
+import Write, { Hold } from "../Write";
 import { sequence } from "../sequence";
 import { MarketingArt, Plate, SoftwareArt } from "../illustrations";
 import { Mark } from "../evidence";
-import { Hold } from "./DividerPages";
 import type { ExperienceEntry } from "@/data/experience";
 import "../flow.css";
 
 /**
  * Introduction spread for one internship role, placed before the systems and work filed under it.
  * Everything written here is the role's own data (employer, dates, note, summary); only the plate is new.
- * The first role has its plate on the left and its text on the right; the second is the mirror image, so the two
- * introductions read as a pair but are never the same spread twice.
+ * The first role has its text on the left and its plate on the right; the second is the mirror image, so the two
+ * introductions read as a pair but are never the same spread twice. The text sheet is also the first one drawn, so the
+ * role is readable before the plate has come up.
  */
 export function RoleIntroPage({
   pageId,
@@ -28,13 +28,13 @@ export function RoleIntroPage({
 }) {
   const l = sequence();
   const r = sequence();
-  const plateFirst = plate === "software";
+  const plateFirst = plate === "marketing";
   const q = plateFirst ? l : r; // the plate's sequence
   const t = plateFirst ? r : l; // the text's sequence
 
   const art = (
     <div className="ri-left">
-      <Hold ms={1800} />
+      <Hold ms={1900} />
       <Plate
         q={q}
         label={
@@ -52,7 +52,7 @@ export function RoleIntroPage({
 
   const text = (
     <div className="ri-text">
-      <Write as="p" className="ri-count" {...t(20)}>
+      <Write as="p" mode="label" className="ri-count" {...t(20)}>
         {`Internship ${String(position).padStart(2, "0")} of ${String(of).padStart(2, "0")}`}
       </Write>
       <Write as="div" className="d-employer" {...t(60)}>

@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { CSSProperties } from "react";
 import { ArrowUpRight } from "lucide-react";
 import Page from "../Page";
+import Spot from "../spots";
 import Write, { timing } from "../Write";
 import { sequence, type Seq } from "../sequence";
 import { Bullets, Caption, TagList } from "../ui";
@@ -117,6 +118,7 @@ export function AnalyzerPage() {
           <Write as="p" className="d-p pv-lede" {...l(p.overview.length)}>
             {p.overview}
           </Write>
+          <Spot kind="resume" />
         </div>
       }
       right={<ProjectScreens web={p.figures?.[0]} mobile={analyzerMobile} label="The AI Resume Analyzer on the web and on a phone" q={r} />}
@@ -202,6 +204,7 @@ export function ReinaPage() {
           <Write as="p" className="d-p pv-lede" {...l(p.overview.length)}>
             {p.overview}
           </Write>
+          <Spot kind="parcel" />
         </div>
       }
       right={<ProjectScreens web={web} mobile={mobile} label="REINA Pabili Services on the web and on a phone" q={r} />}

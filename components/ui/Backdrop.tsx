@@ -1,8 +1,9 @@
 /**
  * The desk the folder sits on: a fixed, purely decorative layer behind everything.
  *
- * It is built like a printed work table rather than a wallpaper: a technical grid with registration marks, two
- * loose sheets lying under the folder, a strip of empty contact-sheet frames, a ruler along the left edge, an
+ * It is built like a printed work table rather than a wallpaper, and it shares the folder's light (from the top left):
+ * a technical grid laid on a receding plane, with registration marks, loose sheets lying under the folder (each a small
+ * stack with visible thickness and a contact shadow), a strip of empty contact-sheet frames, a ruler along the left edge, an
  * oversized outlined monogram, and a few small orange marks that tie the desk to the folder's tab. Paper grain and
  * a soft vignette sit on top of all of it.
  *
@@ -15,13 +16,19 @@ export default function Backdrop() {
   return (
     <div className="bd" aria-hidden="true">
       <div className="bd-glow" />
-      <div className="bd-grid" />
+      <div className="bd-plane">
+        <div className="bd-grid" />
+      </div>
+      <div className="bd-far" />
       <div className="bd-ruler" />
       <div className="bd-sheet bd-sheet-a">
         <i /> <i /> <i /> <i /> <i />
       </div>
       <div className="bd-sheet bd-sheet-b">
         <i /> <i /> <i /> <i />
+      </div>
+      <div className="bd-sheet bd-sheet-c">
+        <i /> <i /> <i />
       </div>
       <div className="bd-strip">
         <div className="bd-strip-track">

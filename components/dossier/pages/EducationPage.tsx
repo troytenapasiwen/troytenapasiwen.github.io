@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Page from "../Page";
+import Spot from "../spots";
 import Write, { Rule } from "../Write";
 import { sequence } from "../sequence";
 import { Stamp } from "../ui";
@@ -28,6 +29,7 @@ export default function EducationPage() {
             </Write>
           ))}
           <Rule className="d-rule-gap" {...l()} />
+          <Spot kind="books" />
         </div>
       }
       right={
